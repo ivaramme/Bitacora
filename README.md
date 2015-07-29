@@ -6,7 +6,9 @@ This project represents a distributed and replicated in-memory key-value datasto
 
 The main reason of using Kafka is to piggy back on it's great architecture that works as a distributed, highly scalable, serializable (in order) database log.
 
-# Flow:
+# Architecture:
+
+![alt tag] (docs/diagram.png)
 
 #### Starting up:
 - Nodes connect to a set of Kafka nodes and listen to topic, each node connects as a different consumer group making sure that each node receives all updates needed for that topic.
