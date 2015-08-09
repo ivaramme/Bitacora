@@ -115,7 +115,7 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public void setExternal(DataManagerExternal external) {
-        this.dataManagerExternal = dataManagerExternal;
+        this.dataManagerExternal = external;
     }
 
     public void setProducer(Producer producer) {
