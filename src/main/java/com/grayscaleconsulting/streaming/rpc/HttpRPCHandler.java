@@ -20,13 +20,13 @@ import java.io.IOException;
  *
  * Created by ivaramme on 7/3/15.
  */
-public class InternalRPCHandler extends AbstractHandler {
-    protected static final Logger logger = LoggerFactory.getLogger(InternalRPCHandler.class);
+public class HttpRPCHandler extends AbstractHandler {
+    protected static final Logger logger = LoggerFactory.getLogger(HttpRPCHandler.class);
 
     private Gson jsonParser;
     private DataManager dataManager;
     
-    public InternalRPCHandler(DataManager dataManager) {
+    public HttpRPCHandler(DataManager dataManager) {
         this.dataManager = dataManager;
         jsonParser = new GsonBuilder().create();
     }
