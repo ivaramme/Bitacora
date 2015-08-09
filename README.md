@@ -53,3 +53,5 @@ You can specify the hostname for your zookeeper cluster as well for your Kafka s
 
 - Delete a value: `curl -X DELETE  "http://localhost:8082/rpc?key=one"`
 
+- Inter-Cluster call to get value from another node: `curl -I "http://localhost:8082/rpc/cluster?key=one"`
+
