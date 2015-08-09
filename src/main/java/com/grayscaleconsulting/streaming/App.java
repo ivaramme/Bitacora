@@ -9,7 +9,8 @@ import com.grayscaleconsulting.streaming.data.DataManagerImpl;
 import com.grayscaleconsulting.streaming.kafka.KafkaConsumerImpl;
 import com.grayscaleconsulting.streaming.kafka.KafkaProducerImpl;
 import com.grayscaleconsulting.streaming.kafka.Producer;
-import com.grayscaleconsulting.streaming.rpc.InternalRPCHandler;
+import com.grayscaleconsulting.streaming.metrics.Metrics;
+import com.grayscaleconsulting.streaming.rpc.HttpRPCHandler;
 
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
@@ -52,6 +53,8 @@ public class App {
         if(null == topic)
             topic = "test";
 
+        Metrics.initJmxReporter();
+
         // Instantiate objects to execute service
         ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeName, apiPort);
         clusterMembership.initialize();
@@ -67,9 +70,9 @@ public class App {
         consumer.setDataManager(dataManager);
         consumer.start(1);
         
-        // Start RPC server
+        // Start HTTP RPC server
         Server server = new Server();
-        server.addHandler(new InternalRPCHandler(dataManager));
+        server.addHandler(new HttpRPCHandler(dataManager));
         server.setStopAtShutdown(true);
         
         SelectChannelConnector connector0 = new SelectChannelConnector();

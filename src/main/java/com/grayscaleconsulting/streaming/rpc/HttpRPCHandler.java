@@ -5,6 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.grayscaleconsulting.streaming.data.DataManager;
 import com.grayscaleconsulting.streaming.data.metadata.KeyValue;
 
+import com.grayscaleconsulting.streaming.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.MetricsRegistry;
 import org.mortbay.jetty.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +26,11 @@ import java.io.IOException;
 public class HttpRPCHandler extends AbstractHandler {
     protected static final Logger logger = LoggerFactory.getLogger(HttpRPCHandler.class);
 
+    static final MetricsRegistry metrics = new MetricsRegistry();
+    private final Counter requests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-requests");
+    private final Counter clusterRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-cluster-requests");
+    private final Counter publicRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-public-requests");
+
     private Gson jsonParser;
     private DataManager dataManager;
     
@@ -35,6 +43,8 @@ public class HttpRPCHandler extends AbstractHandler {
     public void handle(String endpoint, HttpServletRequest req, HttpServletResponse resp, int i) throws IOException, ServletException {
         if(endpoint.startsWith(RPCUtils.RPC_ENDPOINT) || endpoint.startsWith(RPCUtils.RPC_CLUSTER_ENDPOINT)) {
             logger.info("New request for endpoint: " + endpoint);
+            requests.inc();
+            
             try {
                 if(null == dataManager) {
                     logger.error("RPC service is not configured correctly");
@@ -59,8 +69,10 @@ public class HttpRPCHandler extends AbstractHandler {
                     KeyValue keyValue = dataManager.getRaw(key, forwardRPCRequest);
                     if (null == keyValue) {
                         logger.info(key + " was not found, returning null value");
+                        clusterRequests.inc();
                         RPCUtils.sendNotFoundResponse(key, resp);
                     } else {
+                        publicRequests.inc(); // public requests will always forward
                         sendResponse(keyValue, resp, forwardRPCRequest);
                     }
                 } else

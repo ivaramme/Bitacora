@@ -42,7 +42,7 @@ public class DataManagerExternalImpl implements DataManagerExternal {
     public ExternalRequest initiateExternalRequest(String key) {
         KeyValue missingValue;
 
-        if(pendingRequests.containsKey(pendingRequests)
+        if(pendingRequests.containsKey(key)
                 && System.currentTimeMillis() > (lastRequestTimestamp.getOrDefault(key, 0L) + requestWindow)) {
             logger.info("Cancelling existing request");
             cancelRequests(key);
@@ -51,19 +51,23 @@ public class DataManagerExternalImpl implements DataManagerExternal {
         List<Node> nodes = clusterMembership.getAvailableNodes();
         List<String> endpoints = nodes.stream().map(Node::getEndpoint).collect(Collectors.toList());
 
-        ExternalRequestTask request =  new ExternalRequestTask(endpoints, key, quorumRequired);
+        if(endpoints.size() > 0) {
+            ExternalRequestTask request = new ExternalRequestTask(endpoints, key, quorumRequired);
 
-        pendingRequests.putIfAbsent(key, request);
-        lastRequestTimestamp.putIfAbsent(key, System.currentTimeMillis());
+            pendingRequests.putIfAbsent(key, request);
+            lastRequestTimestamp.putIfAbsent(key, System.currentTimeMillis());
 
-        ExternalRequest resp;
-        try {
-            resp = request.call();
-        }catch (IllegalArgumentException iae) { 
-            return null;
-        }
+            ExternalRequest resp;
+            try {
+                resp = request.call();
+            } catch (IllegalArgumentException iae) {
+                return null;
+            }
+
+            return resp;
+        } 
         
-        return resp;
+        return null;
     }
 
     @Override

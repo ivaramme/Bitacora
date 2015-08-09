@@ -3,6 +3,8 @@ package com.grayscaleconsulting.streaming.data;
 import com.grayscaleconsulting.streaming.kafka.Producer;
 import com.grayscaleconsulting.streaming.data.external.ExternalRequest;
 import com.grayscaleconsulting.streaming.data.metadata.KeyValue;
+import com.grayscaleconsulting.streaming.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,10 +12,21 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Exposes and API to interact with the main memory structure.
+ * 
  * Created by ivaramme on 7/1/15.
  */
 public class DataManagerImpl implements DataManager {
     private static Logger logger = LoggerFactory.getLogger(DataManagerImpl.class);
+
+    private final Counter getRawRequests = Metrics.getDefault().newCounter(DataManagerImpl.class, "get-raw-requests");
+    private final Counter getRawMissingRequests = Metrics.getDefault().newCounter(DataManagerImpl.class, "get-raw-missing-requests");
+    private final Counter getValueRequests = Metrics.getDefault().newCounter(DataManagerImpl.class, "get-value-requests");
+    private final Counter getValueMissingRequests = Metrics.getDefault().newCounter(DataManagerImpl.class, "get-value-missing-requests");
+    private final Counter setValueFromLog = Metrics.getDefault().newCounter(DataManagerImpl.class, "set-value-from-log");
+    private final Counter setValueFromCluster = Metrics.getDefault().newCounter(DataManagerImpl.class, "set-value-in-cluster");
+    private final Counter deleteValue = Metrics.getDefault().newCounter(DataManagerImpl.class, "delete-value");
+
 
     private DataManagerExternal dataManagerExternal;
     private Producer producer;
@@ -36,6 +49,8 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public KeyValue getRaw(String key, boolean forwardIfMissing) {
+        getRawRequests.inc();
+        
         KeyValue keyValue = data.get(key);
         if(keyValue != null) {
             return keyValue;
@@ -43,6 +58,7 @@ public class DataManagerImpl implements DataManager {
             // Execute query to cluster
             ExternalRequest request = dataManagerExternal.initiateExternalRequest(key);
             if(request != null && dataManagerExternal.isStillValidRequest(key, request.getToken())) {
+                dataManagerExternal.invalidateExternalRequest(key);
                 keyValue = request.getKeyValue();
                 if (keyValue != null) {
                     setFromCluster(keyValue);
@@ -50,6 +66,8 @@ public class DataManagerImpl implements DataManager {
                 }
             }
         }
+
+        getRawMissingRequests.inc();
         return null;
     }
 
@@ -60,10 +78,13 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public String get(String key, boolean forwardIfMissing) {
+        getValueRequests.inc();
+        
         KeyValue keyValue = getRaw(key, forwardIfMissing);
         if(keyValue != null) {
             return keyValue.getValue();
         }
+        getValueMissingRequests.inc();
         return null;
     }
 
@@ -77,19 +98,20 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public void setFromCluster(KeyValue value) {
-        logger.info("Setting key: " + value.getKey() + " from another node in the cluster");
+        logger.info("Attempting to set key: " + value.getKey() + " from another node in the cluster");
         
         if(value.getTtl() != KeyValue.TTL_EXPIRED) {
             value.setSource(KeyValue.SOURCE_CLUSTER);
-            data.putIfAbsent(value.getKey(), value); // use this in case of race condition
+            if(null == data.putIfAbsent(value.getKey(), value)) { // use this in case of race condition
+                setValueFromCluster.inc();
+            }
         } 
     }
 
     @Override
     public void setFromLog(KeyValue value) {
-        if(null != dataManagerExternal) {
-            dataManagerExternal.initiateExternalRequest(value.getKey());
-        }
+        setValueFromLog.inc();
+        dataManagerExternal.invalidateExternalRequest(value.getKey()); // invalidate any pending RPC call for this key
         
         if(value.getTtl() != KeyValue.TTL_EXPIRED) {
             logger.info("Setting key: " + value.getKey() + " from log");
@@ -106,6 +128,8 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public void delete(String key) {
+        deleteValue.inc();
+        
         KeyValue value = getRaw(key, true);
         if(null != value) {
             value.expire();
