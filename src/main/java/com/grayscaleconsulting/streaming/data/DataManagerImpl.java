@@ -81,7 +81,7 @@ public class DataManagerImpl implements DataManager {
         
         if(value.getTtl() != KeyValue.TTL_EXPIRED) {
             value.setSource(KeyValue.SOURCE_CLUSTER);
-            data.put(value.getKey(), value);
+            data.putIfAbsent(value.getKey(), value); // use this in case of race condition
         } 
     }
 

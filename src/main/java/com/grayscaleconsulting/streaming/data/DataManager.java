@@ -64,7 +64,9 @@ public interface DataManager {
     void setFromLog(KeyValue value); // responds messages sent via kafka
 
     /**
-     * Marks a key as available for deletion
+     * Marks a key as available for deletion and sends it down the log.
+     * 
+     * <p>The data is not deleted locally, it is just expired and then sent to the log as an immutable event </p>
      * @param key
      */
     void delete(String key);
