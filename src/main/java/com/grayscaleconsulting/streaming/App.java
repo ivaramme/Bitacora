@@ -10,6 +10,7 @@ import com.grayscaleconsulting.streaming.kafka.KafkaConsumerImpl;
 import com.grayscaleconsulting.streaming.kafka.KafkaProducerImpl;
 import com.grayscaleconsulting.streaming.kafka.Producer;
 import com.grayscaleconsulting.streaming.metrics.Metrics;
+import com.grayscaleconsulting.streaming.rpc.AvroSocketRPCHandler;
 import com.grayscaleconsulting.streaming.rpc.HttpRPCHandler;
 
 import org.mortbay.jetty.Server;
@@ -69,6 +70,10 @@ public class App {
         KafkaConsumerImpl consumer = new KafkaConsumerImpl(topic, nodeName, zookeeperHosts);
         consumer.setDataManager(dataManager);
         consumer.start(1);
+        
+        // Start Socket RPC Server
+        AvroSocketRPCHandler rpcServer = new AvroSocketRPCHandler(dataManager, apiPort+100);
+        
         
         // Start HTTP RPC server
         Server server = new Server();

@@ -1,0 +1,40 @@
+{
+    "namespace" : "com.grayscaleconsulting.streaming.rpc.avro",
+    "protocol" : "RPCHandlerAvro",
+    "doc" : "RPC methods to query the database",
+    "types": [ {"name" : "KeyValueRawAvro",
+                  "type" : "record",
+                  "fields" : [
+                        {"name": "key", "type": "string"},
+                        {"name": "value", "type": "string"},
+                        {"name": "timestamp", "type": "long"},
+                        {"name": "source", "type": "int"},
+                        {"name": "ttl", "type": "int"}
+                  ]} ],
+    "messages" : {
+        "getValue" : {
+                    "doc" : "Fetches the value associated to a given key",
+                    "request" : [{ "name" : "key", "type" : "string" }],
+                    "response" : ["null", "string"]
+                }
+        /*,
+        "getRawValue" : {
+                            "doc" : "Fetches the value associated to a given key",
+                            "request" : [{ "name" : "key", "type" : "string" }],
+                            "response" : "KeyValueRawAvro"
+                        }
+        ,
+        "setValue" : {
+                            "doc" : "Fetches the value associated to a given key",
+                            "request" : [{ "name" : "key", "type" : "string" }, { "name" : "value", "type" : "string" } ],
+                            "response" : "string"
+                        }
+        ,
+        "delete" : {
+                             "doc" : "Fetches the value associated to a given key",
+                             "request" : [{ "name" : "key", "type" : "string" } ]
+                         }
+
+        */
+    }
+}

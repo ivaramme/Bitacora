@@ -2,3 +2,5 @@
 Streaming.iml
 target
 .DS_Store
+*Avro.java
+avrogenerated/
