@@ -26,7 +26,6 @@ import java.io.IOException;
 public class HttpRPCHandler extends AbstractHandler {
     protected static final Logger logger = LoggerFactory.getLogger(HttpRPCHandler.class);
 
-    static final MetricsRegistry metrics = new MetricsRegistry();
     private final Counter requests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-requests");
     private final Counter clusterRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-cluster-requests");
     private final Counter publicRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-public-requests");

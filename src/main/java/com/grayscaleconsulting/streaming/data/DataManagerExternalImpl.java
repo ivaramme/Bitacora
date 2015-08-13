@@ -5,6 +5,9 @@ import com.grayscaleconsulting.streaming.cluster.nodes.Node;
 import com.grayscaleconsulting.streaming.data.external.ExternalRequestTask;
 import com.grayscaleconsulting.streaming.data.external.ExternalRequest;
 import com.grayscaleconsulting.streaming.data.metadata.KeyValue;
+import com.grayscaleconsulting.streaming.metrics.Metrics;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +30,9 @@ public class DataManagerExternalImpl implements DataManagerExternal {
     private double quorumRequired = 0.5;
     // mills needed to pass before another request can be done for the same window
     private int    requestWindow  = 200;
-    
     private ExecutorService executor;
+    
+    private Timer requestDurationTimer = Metrics.getDefault().newTimer(DataManagerExternalImpl.class, "external-value-request-duration");
 
     public DataManagerExternalImpl(ClusterMembership clusterMembership) {
         this.clusterMembership = clusterMembership;
@@ -52,6 +56,7 @@ public class DataManagerExternalImpl implements DataManagerExternal {
         List<String> endpoints = nodes.stream().map(Node::getEndpoint).collect(Collectors.toList());
 
         if(endpoints.size() > 0) {
+            final TimerContext context = requestDurationTimer.time();
             ExternalRequestTask request = new ExternalRequestTask(endpoints, key, quorumRequired);
 
             pendingRequests.putIfAbsent(key, request);
@@ -62,6 +67,8 @@ public class DataManagerExternalImpl implements DataManagerExternal {
                 resp = request.call();
             } catch (IllegalArgumentException iae) {
                 return null;
+            } finally {
+                context.stop();
             }
 
             return resp;
