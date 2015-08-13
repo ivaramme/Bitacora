@@ -3,11 +3,15 @@ package com.grayscaleconsulting.streaming.kafka;
 import com.grayscaleconsulting.streaming.data.DataManager;
 import com.grayscaleconsulting.streaming.data.metadata.KeyValue;
 import kafka.consumer.ConsumerConfig;
+import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,5 +98,39 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.streaming.kafk
         props.put("auto.commit.interval.ms", "1000");
         props.put("auto.commit.enable", "false");
         return new ConsumerConfig(props);
+    }
+    
+}
+
+/**
+ * Created by ivaramme on 6/27/15.
+ */
+class KafkaConsumerTask implements Runnable{
+    private KafkaStream stream;
+    private int threadNumber;
+    private ConsumerConnector consumer;
+    private java.util.function.Consumer<String> callback;
+
+    public KafkaConsumerTask(ConsumerConnector consumer, KafkaStream stream, int threadNumber, java.util.function.Consumer<String> callback) {
+        this.consumer = consumer;
+        this.stream = stream;
+        this.threadNumber = threadNumber;
+        this.callback = callback;
+    }
+
+    public void run(){
+        ConsumerIterator<byte[], byte[]> it = stream.iterator();
+        while (it.hasNext()) {
+            try {
+                InputStream is = new ByteArrayInputStream(it.next().message());
+                callback.accept(IOUtils.toString(is));
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                consumer.commitOffsets(true);
+            }
+        }
+
+        System.out.println("Shutting down Thread: " + threadNumber);
     }
 }
