@@ -15,6 +15,7 @@ import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by ivaramme on 7/1/15.
@@ -52,6 +53,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
                                 initialize();
                             } else if(event.getState().equals(Event.KeeperState.SyncConnected)) {
                                 try {
+                                    createParentZNode("/"+NODE_AVAILABLE_SERVERS, new byte[0]);
                                     registerNode();
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -60,8 +62,6 @@ public class ClusterMembershipImpl implements ClusterMembership {
                         }
                     });
             initialized = true;
-
-            createParentZNode("/"+NODE_AVAILABLE_SERVERS, new byte[0]);
         } catch (IOException e) {
             logger.error("Unable to connect to Zookeeper. Signing off: " + e);
             e.printStackTrace();
@@ -102,12 +102,18 @@ public class ClusterMembershipImpl implements ClusterMembership {
     }
 
     @Override
-    public List<Node> getAvailableNodes() {
+    public List<Node> getAvailableNodes() throws IllegalStateException{
+        checkState(registered, "Cluster is not registered, can't return list");
         return nodesAvailable;
     }
 
     public boolean isInitialized() {
         return initialized;
+    }
+
+    @Override
+    public boolean isRegistered() { 
+        return registered; 
     }
 
     /**
@@ -243,5 +249,12 @@ public class ClusterMembershipImpl implements ClusterMembership {
                 }
             }
         }, zNode);
+    }
+    
+    public void shutdown() throws InterruptedException {
+        checkNotNull(zooKeeper, "Zookeeper has not been instantiated");
+
+        initialized = false;
+        zooKeeper.close();
     }
 }

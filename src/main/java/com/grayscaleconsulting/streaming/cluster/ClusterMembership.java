@@ -31,7 +31,14 @@ public interface ClusterMembership {
      * List all available nodes in the cluster 
      * @return list with node names
      */
-    List<Node> getAvailableNodes();
+    List<Node> getAvailableNodes() throws IllegalStateException;
 
+    /**
+     * Stops the cluster membership process
+     * @throws InterruptedException
+     */
+    void shutdown() throws InterruptedException;
+    
     boolean isInitialized();
+    boolean isRegistered();
 }

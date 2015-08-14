@@ -52,27 +52,36 @@ public class DataManagerExternalImpl implements DataManagerExternal {
             cancelRequests(key);
         }
 
-        List<Node> nodes = clusterMembership.getAvailableNodes();
-        List<String> endpoints = nodes.stream().map(Node::getEndpoint).collect(Collectors.toList());
+        List<Node> nodes = null;
 
-        if(endpoints.size() > 0) {
-            final TimerContext context = requestDurationTimer.time();
-            ExternalRequestTask request = new ExternalRequestTask(endpoints, key, quorumRequired);
+        try {
+            nodes = clusterMembership.getAvailableNodes();
+        } catch (IllegalStateException e) {
+            logger.error("Unable to fetch available nodes as node is not registered in cluster");
+        }
 
-            pendingRequests.putIfAbsent(key, request);
-            lastRequestTimestamp.putIfAbsent(key, System.currentTimeMillis());
+        if(null != nodes) {
+            List<String> endpoints = nodes.stream().map(Node::getEndpoint).collect(Collectors.toList());
 
-            ExternalRequest resp;
-            try {
-                resp = request.call();
-            } catch (IllegalArgumentException iae) {
-                return null;
-            } finally {
-                context.stop();
+            if (endpoints.size() > 0) {
+                final TimerContext context = requestDurationTimer.time();
+                ExternalRequestTask request = new ExternalRequestTask(endpoints, key, quorumRequired);
+
+                pendingRequests.putIfAbsent(key, request);
+                lastRequestTimestamp.putIfAbsent(key, System.currentTimeMillis());
+
+                ExternalRequest resp;
+                try {
+                    resp = request.call();
+                } catch (IllegalArgumentException iae) {
+                    return null;
+                } finally {
+                    context.stop();
+                }
+
+                return resp;
             }
-
-            return resp;
-        } 
+        }
         
         return null;
     }
