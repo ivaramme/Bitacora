@@ -1,5 +1,5 @@
 {
-    "namespace" : "com.grayscaleconsulting.streaming.rpc.avro",
+    "namespace" : "com.grayscaleconsulting.bitacora.rpc.avro",
     "protocol" : "RPCHandlerAvro",
     "doc" : "RPC methods to query the database",
     "types": [ {"name" : "KeyValueRawAvro",
