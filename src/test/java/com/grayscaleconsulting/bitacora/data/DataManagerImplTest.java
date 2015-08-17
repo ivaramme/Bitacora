@@ -174,7 +174,7 @@ public class DataManagerImplTest {
         
         public KeyValue getKeyValue() {
             if(200 == code)
-                return KeyValue.createKeyValueFromClusterValue(this.getKey(), this.value, 100000, KeyValue.TTL_EXPIRED);
+                return KeyValue.createKeyValueFromClusterValue(this.getKey(), this.value, 100000, KeyValue.TTL_FOREVER);
             else 
                 return null;
         }
