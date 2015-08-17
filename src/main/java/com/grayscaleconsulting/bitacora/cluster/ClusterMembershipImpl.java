@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
@@ -31,7 +32,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
     private String registrationName;
     private String nodeName;
     private int apiPort;
-    private List<Node> nodesAvailable = new ArrayList<>();
+    private List<Node> nodesAvailable = new CopyOnWriteArrayList<>();
 
     public ClusterMembershipImpl(String zkHosts, String nodeName, int apiPort) {
         this.zkHosts = zkHosts;
@@ -149,6 +150,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
                                     .collect(Collectors.toList());
 
                             // Keep stats for existing nodes
+                            // TODO: think of moving this to the metrics module instead of this.
                             nodesFound.forEach(node -> {
                                 for(Node n : nodesAvailable) {
                                     if(n.getName().equalsIgnoreCase(node.getName())) {

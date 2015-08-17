@@ -18,7 +18,6 @@ public class ClusterMembershipImplTest {
     
     @Before
     public void setup() throws Exception {
-        portZK = TestUtils.choosePort();
         int portApi = TestUtils.choosePort();
         zkServer = new EmbeddedZookeeper(TestZKUtils.zookeeperConnect());
         membership = new ClusterMembershipImpl(zkServer.connectString(), "node1", portApi);
@@ -31,6 +30,7 @@ public class ClusterMembershipImplTest {
     public void tearDown() throws IOException {
         zkServer.shutdown();
     }
+    
     @Test(expected = java.lang.IllegalStateException.class )
     public void testRegisterNodeOnceOnly() throws Exception {
         assertTrue(membership.isInitialized());
