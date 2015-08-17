@@ -1,7 +1,8 @@
 package com.grayscaleconsulting.bitacora.cluster;
 
 import kafka.utils.TestUtils;
-import org.apache.curator.test.TestingServer;
+import kafka.utils.TestZKUtils;
+import kafka.zk.EmbeddedZookeeper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,7 +12,7 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 
 public class ClusterMembershipImplTest {
-    private TestingServer zkServer;
+    private EmbeddedZookeeper zkServer;
     private ClusterMembership membership;
     private int portZK;
     
@@ -19,8 +20,8 @@ public class ClusterMembershipImplTest {
     public void setup() throws Exception {
         portZK = TestUtils.choosePort();
         int portApi = TestUtils.choosePort();
-        zkServer = new TestingServer(portZK, true);
-        membership = new ClusterMembershipImpl("127.0.0.1:" + portZK, "node1", portApi);
+        zkServer = new EmbeddedZookeeper(TestZKUtils.zookeeperConnect());
+        membership = new ClusterMembershipImpl(zkServer.connectString(), "node1", portApi);
         membership.initialize();
 
         Thread.sleep(100);
@@ -28,8 +29,7 @@ public class ClusterMembershipImplTest {
 
     @After
     public void tearDown() throws IOException {
-        zkServer.stop();
-        zkServer.close();
+        zkServer.shutdown();
     }
     @Test(expected = java.lang.IllegalStateException.class )
     public void testRegisterNodeOnceOnly() throws Exception {
@@ -48,9 +48,9 @@ public class ClusterMembershipImplTest {
         assertTrue(membership.isInitialized());
         assertEquals(0, membership.getAvailableNodes().size());
 
-        ClusterMembership newMember = new ClusterMembershipImpl("127.0.0.1:"+portZK, "node2", 5004);
+        ClusterMembership newMember = new ClusterMembershipImpl(zkServer.connectString(), "node2", 5004);
         newMember.initialize();
-        Thread.sleep(100);
+        Thread.sleep(200);
         
         assertEquals(1, membership.getAvailableNodes().size());
     }
@@ -60,13 +60,13 @@ public class ClusterMembershipImplTest {
         assertTrue(membership.isInitialized());
         assertEquals(0, membership.getAvailableNodes().size());
 
-        ClusterMembership newMember = new ClusterMembershipImpl("127.0.0.1:"+portZK, "node2", 5004);
+        ClusterMembership newMember = new ClusterMembershipImpl(zkServer.connectString(), "node2", 5004);
         newMember.initialize();
-        Thread.sleep(100);
+        Thread.sleep(200);
 
         assertEquals(1, membership.getAvailableNodes().size());
         newMember.shutdown();
-        Thread.sleep(100);
+        Thread.sleep(200);
 
         assertEquals(0, membership.getAvailableNodes().size());
     }
@@ -75,8 +75,8 @@ public class ClusterMembershipImplTest {
     public void testOnDisconnectNotRegistered() throws Exception {
         assertTrue(membership.isRegistered());
         
-        zkServer.close();
-        Thread.sleep(100);
+        zkServer.shutdown();
+        Thread.sleep(200);
         
         assertFalse(membership.isRegistered());
     }
@@ -85,7 +85,7 @@ public class ClusterMembershipImplTest {
     public void testOnDisconnectThrowExceptionFetchingNodes() throws Exception {
         assertTrue(membership.isRegistered());
 
-        zkServer.close();
+        zkServer.shutdown();
         Thread.sleep(200);
 
         membership.getAvailableNodes();

@@ -217,11 +217,5 @@
             <artifactId>avro-ipc</artifactId>
             <version>1.7.7</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-test</artifactId>
-            <version>2.7.1</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 </project>
