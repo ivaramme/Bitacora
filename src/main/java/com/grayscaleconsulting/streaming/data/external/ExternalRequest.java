@@ -41,7 +41,7 @@ public class ExternalRequest {
         this.token = UUID.randomUUID();
         this.endpointResponse = new HashMap<>();
     }
-    
+
     public long elapsed() {
         return System.currentTimeMillis() - started;
     }

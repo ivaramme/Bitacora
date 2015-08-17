@@ -6,6 +6,7 @@ import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.message.MessageAndMetadata;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,19 +54,20 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.streaming.kafk
         executor = Executors.newFixedThreadPool(partitions);
 
         // This callback is invoked by the ConsumerTask when it receives a new message
-        java.util.function.Consumer<String> callback = new java.util.function.Consumer<String>() {
+        java.util.function.BiConsumer<String, String> callback = new java.util.function.BiConsumer<String, String>() {
             @Override
-            public void accept(String s) {
-                if(KeyValue.isValidKeyValue(s)) {
-                    logger.info("New message received from log: " + s );
-                    String[] vals = s.split("\\"+String.valueOf(KeyValue.SEPARATOR));
+            public void accept(String key, String message) {
+                logger.info("New message received from log: " + message );
+                if(KeyValue.isValidKeyValue(message)) {
+                    String[] vals = message.split("\\"+String.valueOf(KeyValue.SEPARATOR));
                     KeyValue value = KeyValue.createKeyValueFromLog(vals[0], vals[1], Long.valueOf(vals[2]), Integer.valueOf(vals[3]));
                     // sets value in local datastore
                     if(null != dataManager) {
                         dataManager.setFromLog(value);
                     }
                 } else {
-                    logger.info("Invalid message received from log: " + s);
+                    dataManager.setFromLog(key, null);
+                    logger.info("Invalid message received from log: " + message);
                 }
             }
         };
@@ -109,9 +111,9 @@ class KafkaConsumerTask implements Runnable{
     private KafkaStream stream;
     private int threadNumber;
     private ConsumerConnector consumer;
-    private java.util.function.Consumer<String> callback;
+    private java.util.function.BiConsumer<String, String> callback;
 
-    public KafkaConsumerTask(ConsumerConnector consumer, KafkaStream stream, int threadNumber, java.util.function.Consumer<String> callback) {
+    public KafkaConsumerTask(ConsumerConnector consumer, KafkaStream stream, int threadNumber, java.util.function.BiConsumer<String, String> callback) {
         this.consumer = consumer;
         this.stream = stream;
         this.threadNumber = threadNumber;
@@ -122,8 +124,14 @@ class KafkaConsumerTask implements Runnable{
         ConsumerIterator<byte[], byte[]> it = stream.iterator();
         while (it.hasNext()) {
             try {
-                InputStream is = new ByteArrayInputStream(it.next().message());
-                callback.accept(IOUtils.toString(is));
+                MessageAndMetadata<byte[], byte[]> message = it.next();
+                String key = IOUtils.toString(new ByteArrayInputStream(message.key()));
+                if(message.message() != null) {
+                    InputStream is = new ByteArrayInputStream(message.message());
+                    callback.accept(key, IOUtils.toString(is));
+                } else {
+                    callback.accept(key, null);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {

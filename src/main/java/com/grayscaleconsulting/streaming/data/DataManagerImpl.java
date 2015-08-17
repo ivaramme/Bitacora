@@ -110,20 +110,29 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public void setFromLog(KeyValue value) {
+        setFromLog(value.getKey(), value);
+    }
+    
+    @Override
+    public void setFromLog(String key, KeyValue value) {
         setValueFromLog.inc();
-        dataManagerExternal.invalidateExternalRequest(value.getKey()); // invalidate any pending RPC call for this key
-        
-        if(value.getTtl() != KeyValue.TTL_EXPIRED) {
-            logger.info("Setting key: " + value.getKey() + " from log");
-            value.setSource(KeyValue.SOURCE_KAFKA);
-            data.put(value.getKey(), value);
+
+        if(null != value) {
+            if(null != dataManagerExternal) {
+                dataManagerExternal.invalidateExternalRequest(key); // invalidate any pending RPC call for this key
+            }
+
+            logger.info("Setting key: " + key + " from log");
+            value.setSource(KeyValue.SOURCE_LOG);
+            data.put(key, value);
         } else {
-            internalDeleteKey(value);
+            internalDeleteKey(key);
         }
     }
+    
 
-    private void internalDeleteKey(KeyValue value) {
-        data.remove(value.getKey());
+    private void internalDeleteKey(String key) {
+        data.remove(key);
     }
 
     @Override
@@ -133,7 +142,7 @@ public class DataManagerImpl implements DataManager {
         KeyValue value = getRaw(key, true);
         if(null != value) {
             value.expire();
-            producer.publish(value);
+            producer.publish(value.getKey(), null);
         }
     }
 

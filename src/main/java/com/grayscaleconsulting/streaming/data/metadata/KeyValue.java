@@ -7,7 +7,7 @@ import java.io.Serializable;
  */
 public class KeyValue implements Serializable, Comparable<KeyValue> {
     public static int SOURCE_MISSING    = 0;
-    public static int SOURCE_KAFKA      = 1;
+    public static int SOURCE_LOG        = 1;
     public static int SOURCE_CLUSTER    = 2;
     
     public static char SEPARATOR = '^'; // TODO: change this to a system wide separator
@@ -49,7 +49,7 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
     }
     
     public static KeyValue createKeyValueFromLog(String key, String value, long timestamp, int ttl) {
-        return new KeyValue(key, value, timestamp, SOURCE_KAFKA, ttl);
+        return new KeyValue(key, value, timestamp, SOURCE_LOG, ttl);
     }
 
     public static KeyValue createKeyValueFromClusterValue(String key, String value, long timestamp, int ttl) {
@@ -100,7 +100,8 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
      * @return
      */
     public static boolean isValidKeyValue(String message) {
-        if(message.isEmpty() ||
+        if(null == message || 
+                message.isEmpty() ||
                 message.indexOf(SEPARATOR) == -1 ||
                 message.length() <= 2 ||
                 message.charAt(message.length()-1) == SEPARATOR ||

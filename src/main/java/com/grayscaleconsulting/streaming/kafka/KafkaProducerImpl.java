@@ -40,12 +40,19 @@ public class KafkaProducerImpl implements Producer {
         }
     }
     
+    @Override
+    public void publish(String key, Object value) {
+        if(null != producer) {
+            ProducerRecord<String, String> data = new ProducerRecord<String, String>(topic, key, (String) value);
+            producer.send(data);
+        }
+    }
+    
     public Properties configure(String brokerList) {
         Properties props = new Properties();
         props.put("bootstrap.servers", brokerList);
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        //props.put("partitioner.class", "example.producer.SimplePartitioner");
         props.put("request.required.acks", "1");
         
         return props;

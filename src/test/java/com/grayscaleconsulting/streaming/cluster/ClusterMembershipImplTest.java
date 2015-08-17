@@ -1,5 +1,6 @@
 package com.grayscaleconsulting.streaming.cluster;
 
+import kafka.utils.TestUtils;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
@@ -12,11 +13,14 @@ import static org.junit.Assert.*;
 public class ClusterMembershipImplTest {
     private TestingServer zkServer;
     private ClusterMembership membership;
+    private int portZK;
     
     @Before
     public void setup() throws Exception {
-        zkServer = new TestingServer(5001, true);
-        membership = new ClusterMembershipImpl("127.0.0.1:5001", "node1", 5003);
+        portZK = TestUtils.choosePort();
+        int portApi = TestUtils.choosePort();
+        zkServer = new TestingServer(portZK, true);
+        membership = new ClusterMembershipImpl("127.0.0.1:" + portZK, "node1", portApi);
         membership.initialize();
 
         Thread.sleep(100);
@@ -44,7 +48,7 @@ public class ClusterMembershipImplTest {
         assertTrue(membership.isInitialized());
         assertEquals(0, membership.getAvailableNodes().size());
 
-        ClusterMembership newMember = new ClusterMembershipImpl("127.0.0.1:5001", "node2", 5004);
+        ClusterMembership newMember = new ClusterMembershipImpl("127.0.0.1:"+portZK, "node2", 5004);
         newMember.initialize();
         Thread.sleep(100);
         
@@ -56,7 +60,7 @@ public class ClusterMembershipImplTest {
         assertTrue(membership.isInitialized());
         assertEquals(0, membership.getAvailableNodes().size());
 
-        ClusterMembership newMember = new ClusterMembershipImpl("127.0.0.1:5001", "node2", 5004);
+        ClusterMembership newMember = new ClusterMembershipImpl("127.0.0.1:"+portZK, "node2", 5004);
         newMember.initialize();
         Thread.sleep(100);
 
