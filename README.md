@@ -1,10 +1,14 @@
-Kafka Distributed Memory Database
+Bitacora - A Kafka Distributed Memory Database 
+
+[ ![Codeship Status for ivaramme/Bitacora](https://codeship.com/projects/af715930-26b3-0133-0bf7-42218616331f/status?branch=master)](https://codeship.com/projects/97183)
 
 # Description:
 
-This project represents a distributed and replicated in-memory key-value datastore that relies on Kafka and accessible from a Web API purely for research purposes (meaning there's a lot more to be done)
+This project is an implementation of a distributed, eventually consistent and replicated in-memory key-value datastore that relies on Kafka and accessible from a Web API or a Socket RPC clients, purely for research purposes (meaning there's a lot more to be done)
 
 The main reason of using Kafka is to piggy back on it's great architecture that works as a distributed, highly scalable, serializable (in order) database log.
+
+For a better performance, your Kafka cluster must have Key-based compaction enabled to make sure all keys (that are needed) exist but at the same time the log doesn't grow up infinitely. More information [here](https://cwiki.apache.org/confluence/display/KAFKA/Log+Compaction)
 
 # Architecture:
 
@@ -31,7 +35,7 @@ The main reason of using Kafka is to piggy back on it's great architecture that 
 
 # Running:
 
-Try `mvn clean package` and execute the jar file in different servers by using: `java -jar target/Streaming-1.0-SNAPSHOT-jar-with-dependencies.jar`
+Assuming you have a Zookeper and Kafka Cluster, try `mvn clean package` and execute the jar file in different servers by using: `java -jar target/Streaming-1.0-SNAPSHOT-jar-with-dependencies.jar`
 
 # System Environment Variables (not java variables):
 
@@ -55,3 +59,6 @@ You can specify the hostname for your zookeeper cluster as well for your Kafka s
 
 - Inter-Cluster call to get value from another node: `curl -I "http://localhost:8082/rpc/cluster?key=one"`
 
+# AVRO RPC
+
+A binary, socket based RPC handler exists that uses AVRO for communication and schema definition but it is truly a work in progress. Eventually more AVRO should be included in more parts of the project to take advantage of its benefits.
