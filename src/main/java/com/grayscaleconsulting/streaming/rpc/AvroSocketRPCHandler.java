@@ -8,7 +8,7 @@ import org.apache.avro.ipc.specific.SpecificResponder;
 import java.net.InetSocketAddress;
 
 import com.grayscaleconsulting.streaming.data.DataManager;
-import com.grayscaleconsulting.streaming.rpc.avrogenerated.RPCHandlerAvro;
+import com.grayscaleconsulting.streaming.rpc.avro.RPCHandlerAvro;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -7,7 +7,6 @@ import com.grayscaleconsulting.streaming.data.metadata.KeyValue;
 
 import com.grayscaleconsulting.streaming.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.MetricsRegistry;
 import org.mortbay.jetty.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
