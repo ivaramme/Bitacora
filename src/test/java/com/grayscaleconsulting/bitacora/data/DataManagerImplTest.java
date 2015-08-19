@@ -2,6 +2,7 @@ package com.grayscaleconsulting.bitacora.data;
 
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.kafka.Consumer;
 import com.grayscaleconsulting.bitacora.kafka.KafkaConsumerImpl;
 import com.grayscaleconsulting.bitacora.kafka.KafkaProducerImpl;
 import com.grayscaleconsulting.bitacora.kafka.Producer;
@@ -60,9 +61,9 @@ public class DataManagerImplTest {
         dataManager = new DataManagerImpl();
         dataManager.setProducer(producer);
 
-        KafkaConsumerImpl consumer = new KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString());
+        Consumer consumer = new KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
         consumer.setDataManager(dataManager);
-        consumer.start(1);
+        consumer.start();
         
         Thread.sleep(100);
     }

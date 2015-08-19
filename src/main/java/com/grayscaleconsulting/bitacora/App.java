@@ -6,6 +6,7 @@ import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerExternal;
 import com.grayscaleconsulting.bitacora.data.DataManagerExternalImpl;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
+import com.grayscaleconsulting.bitacora.kafka.Consumer;
 import com.grayscaleconsulting.bitacora.kafka.KafkaConsumerImpl;
 import com.grayscaleconsulting.bitacora.kafka.KafkaProducerImpl;
 import com.grayscaleconsulting.bitacora.kafka.Producer;
@@ -67,9 +68,9 @@ public class App {
         dataManager.setExternal(externalData);
         dataManager.setProducer(kafkaProducer);
         
-        KafkaConsumerImpl consumer = new KafkaConsumerImpl(topic, nodeName, zookeeperHosts);
+        Consumer consumer = new KafkaConsumerImpl(topic, nodeName, zookeeperHosts, 1);
         consumer.setDataManager(dataManager);
-        consumer.start(1);
+        consumer.start();
         
         // Start Socket RPC Server
         AvroSocketRPCHandler rpcServer = new AvroSocketRPCHandler(dataManager, apiPort+100);

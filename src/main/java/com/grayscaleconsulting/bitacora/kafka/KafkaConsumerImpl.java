@@ -32,17 +32,22 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.bitacora.kafka
     private final String clientId;
     private final String zookeeperHosts;
     private DataManager dataManager;
+    private int partitions;
 
-    public KafkaConsumerImpl(String topic, String clientId, String zookeeperHosts) {
+    public KafkaConsumerImpl(String topic, String clientId, String zookeeperHosts, int partitions) {
         this.topic = topic;
         this.zookeeperHosts = zookeeperHosts;
         this.clientId = clientId;
-        
+        this.partitions = partitions;
         
         consumer = kafka.consumer.Consumer.createJavaConsumerConnector(configure(clientId, zookeeperHosts));
     }
+
+    public void start() {
+        start(partitions);
+    }
     
-    public void start(int partitions) {
+    protected void start(int partitions) {
         Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
         topicCountMap.put(topic, new Integer(partitions));
         
