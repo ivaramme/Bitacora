@@ -1,5 +1,6 @@
 package com.grayscaleconsulting.bitacora.data;
 
+import com.grayscaleconsulting.bitacora.com.grayscaleconsulting.bitacora.storage.LocalStorage;
 import com.grayscaleconsulting.bitacora.kafka.Producer;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
@@ -26,12 +27,14 @@ public class DataManagerImpl implements DataManager {
     private final Counter setValueFromLog = Metrics.getDefault().newCounter(DataManagerImpl.class, "set-value-from-log");
     private final Counter setValueFromCluster = Metrics.getDefault().newCounter(DataManagerImpl.class, "set-value-in-cluster");
     private final Counter deleteValue = Metrics.getDefault().newCounter(DataManagerImpl.class, "delete-value");
+    private final Counter expiredKeyValue = Metrics.getDefault().newCounter(DataManagerImpl.class, "expired-key-value");
 
 
     private DataManagerExternal dataManagerExternal;
     private Producer producer;
     private Map<String, KeyValue> data;
-    
+    private LocalStorage storage;
+
     public DataManagerImpl() {
         this.data = new ConcurrentHashMap<>();
     }
@@ -52,17 +55,29 @@ public class DataManagerImpl implements DataManager {
         getRawRequests.inc();
         
         KeyValue keyValue = data.get(key);
+        if(null == keyValue) {
+            if(null != storage && storage.isReady()) {
+                try {
+                    keyValue = storage.get(key);
+                } catch (Exception e) {
+                    logger.error("Error loading key {} from local storage", key);
+                }
+            }
+        }
+        
         if(keyValue != null) {
-            return keyValue;
+            if(isValidKeyValue(keyValue)) {
+                return keyValue;
+            }
         } else if(forwardIfMissing && null != dataManagerExternal) {
-            // Execute query to cluster
+            // Send query to cluster
             ExternalRequest request = dataManagerExternal.initiateExternalRequest(key);
             if(request != null && dataManagerExternal.isStillValidRequest(key, request.getToken())) {
                 dataManagerExternal.invalidateExternalRequest(key);
                 keyValue = request.getKeyValue();
-                if (keyValue != null) {
-                    setFromCluster(keyValue);
-                    return keyValue;
+                if (null != keyValue && isValidKeyValue(keyValue)) {
+                        setFromCluster(keyValue);
+                        return keyValue;
                 }
             }
         }
@@ -100,7 +115,7 @@ public class DataManagerImpl implements DataManager {
     public void setFromCluster(KeyValue value) {
         logger.info("Attempting to set key: " + value.getKey() + " from another node in the cluster");
         
-        if(value.getTtl() != KeyValue.TTL_EXPIRED) {
+        if(value.getTtl() != KeyValue.TTL_EXPIRED && isValidKeyValue(value)) {
             value.setSource(KeyValue.SOURCE_CLUSTER);
             if(null == data.putIfAbsent(value.getKey(), value)) { // use this in case of race condition
                 setValueFromCluster.inc();
@@ -125,6 +140,14 @@ public class DataManagerImpl implements DataManager {
             logger.info("Setting key: " + key + " from log");
             value.setSource(KeyValue.SOURCE_LOG);
             data.put(key, value);
+            
+            if(null != storage && storage.isReady()) {
+                try {
+                    storage.set(key, value);
+                } catch (Exception e) {
+                    logger.error("Error persisting object to local storage {}", e);
+                }
+            }
         } else {
             internalDeleteKey(key);
         }
@@ -132,6 +155,14 @@ public class DataManagerImpl implements DataManager {
     
 
     private void internalDeleteKey(String key) {
+        if(null != storage && storage.isReady()) {
+            try {
+                storage.delete(key);
+            } catch (Exception e) {
+                logger.error("Error deleting key {} from local storage.", key);
+            }
+        }
+            
         data.remove(key);
     }
 
@@ -153,5 +184,18 @@ public class DataManagerImpl implements DataManager {
 
     public void setProducer(Producer producer) {
         this.producer = producer;
+    }
+    
+    public void setLocalStorage(LocalStorage storage) {
+        this.storage = storage;
+    }
+    
+    private boolean isValidKeyValue(KeyValue keyValue) {
+        if(keyValue.getTtl() == KeyValue.TTL_FOREVER || keyValue.getTtl() >= System.currentTimeMillis()) {
+            return true;
+        }
+
+        expiredKeyValue.inc();
+        return false;
     }
 }

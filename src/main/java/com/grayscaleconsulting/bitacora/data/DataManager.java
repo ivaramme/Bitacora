@@ -1,5 +1,6 @@
 package com.grayscaleconsulting.bitacora.data;
 
+import com.grayscaleconsulting.bitacora.com.grayscaleconsulting.bitacora.storage.LocalStorage;
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
 import com.grayscaleconsulting.bitacora.kafka.Producer;
 
@@ -79,4 +80,5 @@ public interface DataManager {
     
     void setExternal(DataManagerExternal external);
     void setProducer(Producer producer);
+    void setLocalStorage(LocalStorage storage);
 }

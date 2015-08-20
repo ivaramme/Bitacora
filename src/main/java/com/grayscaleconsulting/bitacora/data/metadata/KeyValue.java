@@ -19,10 +19,10 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
     private String value;
     private long timestamp;
     private int source;
-    private int ttl; 
+    private long ttl;
     transient private KeyValueStats stats;
 
-    private KeyValue(String key, String value, long timestamp, int source, int ttl) {
+    private KeyValue(String key, String value, long timestamp, int source, long ttl) {
         this.key = key;
         this.value = value;
         this.timestamp = timestamp;
@@ -48,11 +48,11 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
         return new KeyValue(key);
     }
     
-    public static KeyValue createKeyValueFromLog(String key, String value, long timestamp, int ttl) {
+    public static KeyValue createKeyValueFromLog(String key, String value, long timestamp, long ttl) {
         return new KeyValue(key, value, timestamp, SOURCE_LOG, ttl);
     }
 
-    public static KeyValue createKeyValueFromClusterValue(String key, String value, long timestamp, int ttl) {
+    public static KeyValue createKeyValueFromClusterValue(String key, String value, long timestamp, long ttl) {
         return new KeyValue(key, value, timestamp, SOURCE_CLUSTER, ttl);
     }
 
@@ -76,7 +76,7 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
         this.source = source;
     }
 
-    public int getTtl() {
+    public long getTtl() {
         return ttl;
     }
 

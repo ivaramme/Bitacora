@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class DataManagerImplTest {
     private DataManager dataManager;
@@ -102,19 +103,19 @@ public class DataManagerImplTest {
         final String key = "key";
         
         internalSet(key, "value");
-        Thread.sleep(100);
+        Thread.sleep(200);
         assertNotNull(dataManager.get(key));
         
         dataManager.delete(key);
-        Thread.sleep(100);
+        Thread.sleep(200);
         System.out.println(dataManager.get(key));
         assertNull(dataManager.get(key));
     }
 
     @Test
-    public void testQueringOtherNodes() throws Exception {
+    public void testQueryingOtherNodes() throws Exception {
         KeyValue val = KeyValue.createKeyValueFromClusterValue("key", "a_value", 22000000, KeyValue.TTL_FOREVER);
-        dataManager.setExternal(setupExternalManager(200, val.getValue()));
+        dataManager.setExternal(setupExternalManager(200, val.getKey(), val.getValue(), val.getTtl()));
 
         assertNull(dataManager.get(val.getKey(), false)); // Not forwarding
 
@@ -125,59 +126,45 @@ public class DataManagerImplTest {
     }
 
     @Test
-    public void testQueringOtherNodesFail() throws Exception {
-        dataManager.setExternal(setupExternalManager(404, null));
-
+    public void testQueryingOtherNodesFail() throws Exception {
+        dataManager.setExternal(setupExternalManager(404, "key", null, KeyValue.TTL_FOREVER));
         assertNull(dataManager.get("key", true));
+    }
+    
+    @Test
+    public void testIgnoreExpiredKey() throws Exception {
+        dataManager.setExternal(setupExternalManager(200, "key", "a_value", KeyValue.TTL_EXPIRED));
+        assertNull(dataManager.get("key", true));
+    }
+
+    @Test
+    public void testCheckJustExpiredKey() throws Exception {
+        // Set a key that will expire in 100 seconds
+        dataManager.setExternal(setupExternalManager(200, "key", "a_value", System.currentTimeMillis() + 100000));
+        assertNotNull(dataManager.get("key", true));
+
+        // Set an expired key
+        dataManager.setExternal(setupExternalManager(200, "another_key", "another_value", System.currentTimeMillis() - 100));
+        assertNull(dataManager.get("another_key", true));
     }
     
     private void internalSet(String key, String value) {
         dataManager.set(key, value);
     }
     
-    private DataManagerExternal setupExternalManager(int responseCode, String value) {
-        return new DataManagerExternal() {
-            @Override
-            public ExternalRequest initiateExternalRequest(String key) {
-                return new MockExternalRequest(key, responseCode, value);
-            }
-
-            @Override
-            public void setQuorum(long percentageNodesNeededToProceed) {
-
-            }
-
-            @Override
-            public void invalidateExternalRequest(String key) {
-
-            }
-
-            @Override
-            public boolean isStillValidRequest(String key, UUID token) {
-                return true;
-            }
-        };
-    }
-    
-    private class MockExternalRequest extends ExternalRequest {
-        private String value;
-        private int code;
+    private DataManagerExternal setupExternalManager(int responseCode, String key, String value, long ttl) {
+        ExternalRequest mockedRequest = mock(ExternalRequest.class);
+        when(mockedRequest.getKeyValue()).thenReturn(KeyValue.createKeyValueFromClusterValue(key, value, 100000, ttl));
         
-        public MockExternalRequest(String key, int totalRequests) {
-            super(key, totalRequests);
-        }
-
-        public MockExternalRequest(String key, int responseCode, String value) {
-            super(key, 1);
-            this.code = responseCode;
-            this.value = value;
+        if(404 == responseCode) {
+            mockedRequest = null;
         }
         
-        public KeyValue getKeyValue() {
-            if(200 == code)
-                return KeyValue.createKeyValueFromClusterValue(this.getKey(), this.value, 100000, KeyValue.TTL_FOREVER);
-            else 
-                return null;
-        }
+        DataManagerExternal manager = mock(DataManagerExternalImpl.class);
+        when(manager.isStillValidRequest(key, null)).thenReturn(true);
+        when(manager.initiateExternalRequest(key)).thenReturn(mockedRequest);
+        
+        return manager;
     }
+
 }
