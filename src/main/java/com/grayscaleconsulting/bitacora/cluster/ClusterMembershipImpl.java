@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
+ * Implementation of a ClusterMembership interface using Zookeeper
+ *
  * Created by ivaramme on 7/1/15.
  */
 public class ClusterMembershipImpl implements ClusterMembership {
@@ -69,7 +71,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
             System.exit(0);
         }
     }
-    
+
     @Override
     public boolean registerNode() throws Exception {
         Preconditions.checkState(initialized);

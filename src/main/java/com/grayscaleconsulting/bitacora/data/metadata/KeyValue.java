@@ -1,15 +1,17 @@
 package com.grayscaleconsulting.bitacora.data.metadata;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * Created by ivaramme on 6/29/15.
  */
 public class KeyValue implements Serializable, Comparable<KeyValue> {
-    public static int SOURCE_MISSING    = 0;
-    public static int SOURCE_LOG        = 1;
-    public static int SOURCE_CLUSTER    = 2;
-    
+    public static final int SOURCE_MISSING    = 0;
+    public static final int SOURCE_LOG        = 1;
+    public static final int SOURCE_CLUSTER    = 2;
+    public static final int SOURCE_PRODUCER   = 3;
+
     public static char SEPARATOR = '^'; // TODO: change this to a system wide separator
     
     public static int TTL_EXPIRED       = -1;
@@ -20,15 +22,23 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
     private long timestamp;
     private int source;
     private long ttl;
+    
+    private String uuid;
+
     transient private KeyValueStats stats;
 
     private KeyValue(String key, String value, long timestamp, int source, long ttl) {
+        this(key, value, timestamp, source, ttl, UUID.randomUUID().toString());
+    }
+
+    private KeyValue(String key, String value, long timestamp, int source, long ttl, String uuid) {
         this.key = key;
         this.value = value;
         this.timestamp = timestamp;
         this.source = source;
         this.ttl = ttl;
-        
+        this.uuid = uuid;
+
         this.stats = new KeyValueStats();
     }
     
@@ -48,12 +58,16 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
         return new KeyValue(key);
     }
     
-    public static KeyValue createKeyValueFromLog(String key, String value, long timestamp, long ttl) {
-        return new KeyValue(key, value, timestamp, SOURCE_LOG, ttl);
+    public static KeyValue createKeyValueFromLog(String key, String value, long timestamp, long ttl, String uuid) {
+        return new KeyValue(key, value, timestamp, SOURCE_LOG, ttl, uuid);
     }
 
-    public static KeyValue createKeyValueFromClusterValue(String key, String value, long timestamp, long ttl) {
-        return new KeyValue(key, value, timestamp, SOURCE_CLUSTER, ttl);
+    public static KeyValue createKeyValueFromClusterValue(String key, String value, long timestamp, long ttl, String uuid) {
+        return new KeyValue(key, value, timestamp, SOURCE_CLUSTER, ttl, uuid);
+    }
+
+    public static KeyValue createNewKeyValue(String key, String value, long timestamp, long ttl) {
+        return new KeyValue(key, value, timestamp, SOURCE_PRODUCER, ttl);
     }
 
     public String getKey() {
@@ -80,18 +94,17 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
         return ttl;
     }
 
+    public String getUuid() {
+        return uuid;
+    }
+
     @Override
     public int compareTo(KeyValue other) {
-        if(other.getTimestamp() > getTimestamp()) 
-            return (int) (other.getTimestamp() - getTimestamp());
-        else if(other.getTimestamp() < getTimestamp())
-            return (int) (other.getTimestamp() - getTimestamp());
-        else
-            return 0;
+        return (int) (other.getTimestamp() - getTimestamp());
     }
     
     public String serialize() {
-        return getKey() + SEPARATOR + getValue() + SEPARATOR + System.currentTimeMillis() + SEPARATOR + getTtl();
+        return getKey() + SEPARATOR + getValue() + SEPARATOR + System.currentTimeMillis() + SEPARATOR + getUuid() + SEPARATOR + getTtl();
     }
 
     /**
@@ -105,7 +118,7 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
                 message.indexOf(SEPARATOR) == -1 ||
                 message.length() <= 2 ||
                 message.charAt(message.length()-1) == SEPARATOR ||
-                message.split("\\"+String.valueOf(SEPARATOR)).length != 4 ) {
+                message.split("\\"+String.valueOf(SEPARATOR)).length != 5 ) {
             return false;
         }
         

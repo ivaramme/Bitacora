@@ -65,7 +65,7 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.bitacora.kafka
                 logger.info("New message received from log: " + message );
                 if(KeyValue.isValidKeyValue(message)) {
                     String[] vals = message.split("\\"+String.valueOf(KeyValue.SEPARATOR));
-                    KeyValue value = KeyValue.createKeyValueFromLog(vals[0], vals[1], Long.valueOf(vals[2]), Integer.valueOf(vals[3]));
+                    KeyValue value = KeyValue.createKeyValueFromLog(vals[0], vals[1], Long.valueOf(vals[2]), Integer.valueOf(vals[4]), vals[3]);
                     // sets value in local datastore
                     if(null != dataManager) {
                         dataManager.setFromLog(value);

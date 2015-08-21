@@ -14,7 +14,6 @@ import static org.junit.Assert.*;
 public class ClusterMembershipImplTest {
     private EmbeddedZookeeper zkServer;
     private ClusterMembership membership;
-    private int portZK;
     
     @Before
     public void setup() throws Exception {

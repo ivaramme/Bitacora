@@ -16,7 +16,7 @@ public interface ClusterMembership {
     void initialize();
 
     /**
-     * Registers node to main registry
+     * Registers node to main registry, should not be invoked explicitly
      * @return
      * @throws Exception
      */

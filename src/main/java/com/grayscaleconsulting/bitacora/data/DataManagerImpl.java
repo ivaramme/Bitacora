@@ -41,8 +41,18 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public boolean contains(String key) {
-        // TODO: implement this as an RPC or remove it from API
-        return data.containsKey(key);
+        if(!data.containsKey(key)) {
+            if(null != storage) {
+                try {
+                    if(null != storage.get(key)) {
+                        return true;
+                    }
+                } catch (Exception e) { }
+            }
+            return false;
+        } 
+        
+        return true;
     }
 
     @Override
@@ -105,7 +115,7 @@ public class DataManagerImpl implements DataManager {
 
     @Override
     public void set(String key, String value) {
-        KeyValue keyValue = KeyValue.createKeyValueFromClusterValue(key, value, System.currentTimeMillis(), KeyValue.TTL_FOREVER);
+        KeyValue keyValue = KeyValue.createNewKeyValue(key, value, System.currentTimeMillis(), KeyValue.TTL_FOREVER);
         if(null != producer) {
             producer.publish(keyValue);
         }

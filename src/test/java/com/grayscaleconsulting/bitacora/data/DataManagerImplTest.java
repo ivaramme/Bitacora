@@ -24,12 +24,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.UUID;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class DataManagerImplTest {
+    public static final int SLEEP_TIME = 200;
     private DataManager dataManager;
     private Producer producer;
     private EmbeddedZookeeper zkServer;
@@ -66,7 +66,7 @@ public class DataManagerImplTest {
         consumer.setDataManager(dataManager);
         consumer.start();
         
-        Thread.sleep(100);
+        Thread.sleep(SLEEP_TIME);
     }
     
     @After
@@ -81,7 +81,7 @@ public class DataManagerImplTest {
         final String key = "key";
 
         internalSet(key, "value");
-        Thread.sleep(100);
+        Thread.sleep(SLEEP_TIME);
         assertNotNull(dataManager.get(key));
 
         KeyValue value = dataManager.getRaw(key);
@@ -89,7 +89,7 @@ public class DataManagerImplTest {
         assertEquals(key,value.getKey());
         assertEquals(KeyValue.SOURCE_LOG, value.getSource());
         assertEquals(KeyValue.TTL_FOREVER, value.getTtl());
-
+        assertNotNull(value.getUuid());
     }
     
     @Test
@@ -103,18 +103,18 @@ public class DataManagerImplTest {
         final String key = "key";
         
         internalSet(key, "value");
-        Thread.sleep(200);
+        Thread.sleep(SLEEP_TIME);
         assertNotNull(dataManager.get(key));
         
         dataManager.delete(key);
-        Thread.sleep(200);
+        Thread.sleep(SLEEP_TIME);
         System.out.println(dataManager.get(key));
         assertNull(dataManager.get(key));
     }
 
     @Test
     public void testQueryingOtherNodes() throws Exception {
-        KeyValue val = KeyValue.createKeyValueFromClusterValue("key", "a_value", 22000000, KeyValue.TTL_FOREVER);
+        KeyValue val = KeyValue.createNewKeyValue("key", "a_value", 22000000, KeyValue.TTL_FOREVER);
         dataManager.setExternal(setupExternalManager(200, val.getKey(), val.getValue(), val.getTtl()));
 
         assertNull(dataManager.get(val.getKey(), false)); // Not forwarding
@@ -141,7 +141,9 @@ public class DataManagerImplTest {
     public void testCheckJustExpiredKey() throws Exception {
         // Set a key that will expire in 100 seconds
         dataManager.setExternal(setupExternalManager(200, "key", "a_value", System.currentTimeMillis() + 100000));
-        assertNotNull(dataManager.get("key", true));
+        KeyValue value = dataManager.getRaw("key", true);
+        assertNotNull(value);
+        assertEquals("uuid", value.getUuid());
 
         // Set an expired key
         dataManager.setExternal(setupExternalManager(200, "another_key", "another_value", System.currentTimeMillis() - 100));
@@ -154,7 +156,7 @@ public class DataManagerImplTest {
     
     private DataManagerExternal setupExternalManager(int responseCode, String key, String value, long ttl) {
         ExternalRequest mockedRequest = mock(ExternalRequest.class);
-        when(mockedRequest.getKeyValue()).thenReturn(KeyValue.createKeyValueFromClusterValue(key, value, 100000, ttl));
+        when(mockedRequest.getKeyValue()).thenReturn(KeyValue.createKeyValueFromClusterValue(key, value, 100000, ttl, "uuid"));
         
         if(404 == responseCode) {
             mockedRequest = null;

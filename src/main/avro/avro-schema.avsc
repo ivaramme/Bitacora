@@ -9,7 +9,8 @@
                         {"name": "value", "type": "string"},
                         {"name": "timestamp", "type": "long"},
                         {"name": "source", "type": "int"},
-                        {"name": "ttl", "type": "int"}
+                        {"name": "ttl", "type": "long"},
+                        {"name": "uuid", "type": "string"}
                   ]} ],
     "messages" : {
         "getValue" : {
