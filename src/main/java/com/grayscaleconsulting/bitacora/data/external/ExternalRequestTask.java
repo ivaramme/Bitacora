@@ -115,16 +115,22 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
                 }
             }
 
-            if(requestsCompleted > 0 && !((double)(successRequests/requestsCompleted) > quorum))
-                break;
         }
-
-        // Sort responses by timestamp or return an empty key if empty
-        request.setKeyValue(results.stream()
-                .sorted((s1, s2) -> s1.compareTo(s2))
-                .findFirst()
-                .orElse(null));
         
+        if(requestsCompleted > 0 && !(((double)((double)successRequests/(double)requestsCompleted)) > quorum)) {
+            successRequests = 0;
+        }
+        
+        request.setFailedRequests(requestsMade-successRequests);
+        request.setSuccessfulRequests(successRequests);
+        
+        if(0 < successRequests) {
+            // Sort responses by timestamp or return an empty key if empty
+            request.setKeyValue(results.stream()
+                    .sorted((s1, s2) -> s1.compareTo(s2))
+                    .findFirst()
+                    .orElse(results.get(0)));
+        }
         request.complete();
         
         logger.info("External request completed");

@@ -31,6 +31,8 @@ public class ExternalRequest {
     private int status = STATUS_UNKNOWN;
     private UUID token; // acts as token to check if request is still valid
     private int totalRequests = 0;
+    private int successfulRequests = 0;
+    private int failedRequests = 0;
     
     private Map<String, String> endpointResponse;
 
@@ -96,5 +98,21 @@ public class ExternalRequest {
 
     public String getKey() {
         return key;
+    }
+
+    public int getFailedRequests() {
+        return failedRequests;
+    }
+
+    public void setFailedRequests(int failedRequests) {
+        this.failedRequests = failedRequests;
+    }
+
+    public int getSuccessfulRequests() {
+        return successfulRequests;
+    }
+
+    public void setSuccessfulRequests(int successfulRequests) {
+        this.successfulRequests = successfulRequests;
     }
 }

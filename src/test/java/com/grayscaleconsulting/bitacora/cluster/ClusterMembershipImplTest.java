@@ -26,7 +26,8 @@ public class ClusterMembershipImplTest {
     }
 
     @After
-    public void tearDown() throws IOException {
+    public void tearDown() throws Exception {
+        membership.shutdown();
         zkServer.shutdown();
     }
     
@@ -52,6 +53,7 @@ public class ClusterMembershipImplTest {
         Thread.sleep(200);
         
         assertEquals(1, membership.getAvailableNodes().size());
+        newMember.shutdown();
     }
 
     @Test
@@ -68,6 +70,8 @@ public class ClusterMembershipImplTest {
         Thread.sleep(200);
 
         assertEquals(0, membership.getAvailableNodes().size());
+        
+        newMember.shutdown();
     }
     
     @Test

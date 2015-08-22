@@ -87,7 +87,7 @@ public class DataManagerExternalImpl implements DataManagerExternal {
     }
 
     @Override
-    public void setQuorum(long percentageNodesNeededToProceed) {
+    public void setQuorum(double percentageNodesNeededToProceed) {
         this.quorumRequired = percentageNodesNeededToProceed;
     }
 

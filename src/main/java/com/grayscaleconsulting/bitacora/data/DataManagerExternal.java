@@ -27,7 +27,7 @@ public interface DataManagerExternal {
      *
      * @param percentageNodesNeededToProceed
      */
-    void setQuorum(long percentageNodesNeededToProceed);
+    void setQuorum(double percentageNodesNeededToProceed);
 
     /**
      * Attempts to cancel a task that is already in progress if another request with the same key
