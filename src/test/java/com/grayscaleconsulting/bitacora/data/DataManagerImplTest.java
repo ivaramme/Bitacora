@@ -32,6 +32,7 @@ public class DataManagerImplTest {
     public static final int SLEEP_TIME = 200;
     private DataManager dataManager;
     private Producer producer;
+    private Consumer consumer;
     private EmbeddedZookeeper zkServer;
     private ZkClient zkClient;
     private KafkaServer kafkaServer;
@@ -62,7 +63,7 @@ public class DataManagerImplTest {
         dataManager = new DataManagerImpl();
         dataManager.setProducer(producer);
 
-        Consumer consumer = new KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
+        consumer = new KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
         consumer.setDataManager(dataManager);
         consumer.start();
         
@@ -71,6 +72,10 @@ public class DataManagerImplTest {
     
     @After
     public void tearDown() throws IOException {
+        
+        consumer.shutdown();
+        producer.shutdown();
+        
         kafkaServer.shutdown();
         zkClient.close();
         zkServer.shutdown();
