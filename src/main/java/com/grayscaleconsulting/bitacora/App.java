@@ -28,7 +28,7 @@ public class App {
     public static void main(String[] args) throws Exception {
         
         //Address of the zookeeper host
-        String zookeeperHosts = System.getenv("ZOOKEEPER_HOST");
+        String zookeeperHosts = System.getenv("ZOOKEEPER_HOSTS");
         if(null == zookeeperHosts)
             zookeeperHosts = "localhost:2181";
         
