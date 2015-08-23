@@ -51,9 +51,9 @@ Bitacora is an eventually consistent, multi-master, key value database that uses
 #### Anti-Patterns:
 - Set-then-Get is considered an **anti-pattern**. When a set instruction is received, it is sent immediately to the log to make sure it gets distributed to all listening nodes, including the one that received the 'set' instruction. This means that data won't be immediately available. At the same time, when you set you already have the data so there's no need to perform such operation.
 
-# Running:
+# Executing:
 
-Assuming you have a Zookeper and Kafka Cluster, try `mvn clean package` and execute the jar file in different servers by using: `java -jar target/Streaming-1.0-SNAPSHOT-jar-with-dependencies.jar`
+Assuming you have a Zookeper and Kafka Cluster, try `mvn clean package` and execute the jar file in different servers by using: `java -jar target/bitacora-1.0-SNAPSHOT-jar-with-dependencies.jar`. Also there's an option to run it as a docker container, see below.
 
 # System Environment Variables (not java variables):
 
@@ -65,7 +65,19 @@ You can specify the hostname for your zookeeper cluster as well for your Kafka s
 
 `API_PORT` is used to specify the port to listen for HTTP calls to interact with the service.
 
-`NODENAME` is used in case you want to specify the name of the node or IP used by other nodes in the cluster to request daa
+`NODENAME` is used in case you want to specify the name of the node or IP used by other nodes in the cluster to request data
+
+
+# Docker Support:
+
+Support for a Docker image to execute the app is provided.
+
+### Instructions 
+After you run `mvn clean package`, build a new Docker image by executing `docker build -t bitacora`. 
+
+To run a docker container with the app embedded execute: `docker run -e "ZOOKEEPER_HOSTS=<YOUR_ZOOKEEPER_HOSTS>" -e "BROKER_LIST=<YOUR_KAFKA_SERVERS>" -d bitacora`. 
+
+The docker base image is included in the repo, located inside: `src/main/docker/Dockerfile`. More information about Docker [here|https://www.docker.com/toolbox].
 
 # Web API (very limited right now):
 

@@ -1,0 +1,1 @@
+FROM ivaramme/bitacora-base
