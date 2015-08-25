@@ -7,6 +7,9 @@ ONBUILD ADD target/bitacora-1.0-SNAPSHOT-jar-with-dependencies.jar /opt/bitacora
 WORKDIR /opt/bitacora
 
 ENV API_PORT 8080
+ENV AVRO_PORT 8081
+
 EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

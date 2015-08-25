@@ -1,4 +1,4 @@
-package com.grayscaleconsulting.bitacora.com.grayscaleconsulting.bitacora.storage;
+package com.grayscaleconsulting.bitacora.storage;
 
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
 

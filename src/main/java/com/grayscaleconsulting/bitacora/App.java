@@ -44,6 +44,13 @@ public class App {
                 apiPort = Integer.valueOf(System.getenv("API_PORT"));
             } catch (NumberFormatException nfe) {}
         }
+
+        int avroPort = apiPort+1;
+        if(null != System.getenv("AVRO_PORT")) {
+            try {
+                apiPort = Integer.valueOf(System.getenv("AVRO_PORT"));
+            } catch (NumberFormatException nfe) {}
+        }
         
         // Kafka server to publish messages to
         String brokerList = System.getenv("BROKER_LIST");
@@ -73,7 +80,7 @@ public class App {
         consumer.start();
         
         // Start Socket RPC Server
-        AvroSocketRPCHandler rpcServer = new AvroSocketRPCHandler(dataManager, apiPort+100);
+        AvroSocketRPCHandler rpcServer = new AvroSocketRPCHandler(dataManager, avroPort);
         
         
         // Start HTTP RPC server
