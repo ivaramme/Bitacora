@@ -2,10 +2,7 @@ package com.grayscaleconsulting.bitacora.data;
 
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
-import com.grayscaleconsulting.bitacora.kafka.Consumer;
-import com.grayscaleconsulting.bitacora.kafka.KafkaConsumerImpl;
-import com.grayscaleconsulting.bitacora.kafka.KafkaProducerImpl;
-import com.grayscaleconsulting.bitacora.kafka.Producer;
+import com.grayscaleconsulting.bitacora.kafka.*;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
@@ -29,7 +26,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class DataManagerImplTest {
-    public static final int SLEEP_TIME = 200;
+    public static final int SLEEP_TIME = 600;
     private DataManager dataManager;
     private Producer producer;
     private Consumer consumer;
@@ -38,7 +35,6 @@ public class DataManagerImplTest {
     private KafkaServer kafkaServer;
     private Buffer<KafkaServer> servers;
     private String test_topic = "test_topic";
-    private String consumer_name = "test_consumer";
     
     @Before
     public void setup() throws Exception {
@@ -63,7 +59,10 @@ public class DataManagerImplTest {
         dataManager = new DataManagerImpl();
         dataManager.setProducer(producer);
 
-        consumer = new KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
+        List<String> brokers = new ArrayList<>();
+        brokers.add("localhost");
+        //KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
+        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, kafkaPort, test_topic, 0, zkServer.connectString());
         consumer.setDataManager(dataManager);
         consumer.start();
         

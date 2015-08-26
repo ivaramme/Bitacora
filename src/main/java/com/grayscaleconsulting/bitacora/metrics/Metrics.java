@@ -15,6 +15,8 @@ public class Metrics {
     }
     
     public static void initJmxReporter() {
-        JmxReporter.startDefault(metrics);
+        if(null == metrics) {
+            JmxReporter.startDefault(metrics);
+        }
     }
 }

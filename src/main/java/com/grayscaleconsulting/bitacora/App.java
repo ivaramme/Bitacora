@@ -6,18 +6,18 @@ import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerExternal;
 import com.grayscaleconsulting.bitacora.data.DataManagerExternalImpl;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
-import com.grayscaleconsulting.bitacora.kafka.Consumer;
-import com.grayscaleconsulting.bitacora.kafka.KafkaConsumerImpl;
-import com.grayscaleconsulting.bitacora.kafka.KafkaProducerImpl;
-import com.grayscaleconsulting.bitacora.kafka.Producer;
+import com.grayscaleconsulting.bitacora.kafka.*;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.grayscaleconsulting.bitacora.rpc.AvroSocketRPCHandler;
 import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
 
+import org.apache.commons.collections.ListUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Main class to execute the server
@@ -26,40 +26,42 @@ import java.net.InetAddress;
  */
 public class App {
     public static void main(String[] args) throws Exception {
-        
+
         //Address of the zookeeper host
         String zookeeperHosts = System.getenv("ZOOKEEPER_HOSTS");
-        if(null == zookeeperHosts)
+        if (null == zookeeperHosts)
             zookeeperHosts = "localhost:2181";
-        
+
         // Name of this node
         String nodeName = System.getenv("NODENAME");
-        if(null == nodeName)
+        if (null == nodeName)
             nodeName = InetAddress.getLocalHost().getHostName();
 
         // Port to serve http API calls
         int apiPort = 8082;
-        if(null != System.getenv("API_PORT")) {
+        if (null != System.getenv("API_PORT")) {
             try {
                 apiPort = Integer.valueOf(System.getenv("API_PORT"));
-            } catch (NumberFormatException nfe) {}
+            } catch (NumberFormatException nfe) {
+            }
         }
 
-        int avroPort = apiPort+1;
-        if(null != System.getenv("AVRO_PORT")) {
+        int avroPort = apiPort + 1;
+        if (null != System.getenv("AVRO_PORT")) {
             try {
                 apiPort = Integer.valueOf(System.getenv("AVRO_PORT"));
-            } catch (NumberFormatException nfe) {}
+            } catch (NumberFormatException nfe) {
+            }
         }
-        
+
         // Kafka server to publish messages to
         String brokerList = System.getenv("BROKER_LIST");
-        if(null == brokerList)
+        if (null == brokerList)
             brokerList = "localhost:9092";
-        
+
         // Where to read and publish messages to
         String topic = System.getenv("KAFKA_TOPIC");
-        if(null == topic)
+        if (null == topic)
             topic = "test";
 
         Metrics.initJmxReporter();
@@ -69,13 +71,22 @@ public class App {
         clusterMembership.initialize();
 
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);
-        
+
         DataManagerExternal externalData = new DataManagerExternalImpl(clusterMembership);
         DataManager dataManager = new DataManagerImpl();
         dataManager.setExternal(externalData);
         dataManager.setProducer(kafkaProducer);
+
+        // Prepare the list of Kafka servers from the global variable
+        List<String> brokers = new ArrayList<>();
+        String[] _kafkaServers = brokerList.split(",");
+        for(int ind = 0; ind < _kafkaServers.length; ind++) {
+            if(_kafkaServers[ind].length() > 0 && _kafkaServers[ind].indexOf(':') > -1) {
+                brokers.add(_kafkaServers[ind].split(":")[0]);
+            }
+        }
         
-        Consumer consumer = new KafkaConsumerImpl(topic, nodeName, zookeeperHosts, 1);
+        Consumer consumer = new KafkaSimpleConsumerImpl(nodeName, brokers, 9092, topic, 0, zookeeperHosts);//KafkaConsumerImpl(topic, nodeName, zookeeperHosts, 1);
         consumer.setDataManager(dataManager);
         consumer.start();
         

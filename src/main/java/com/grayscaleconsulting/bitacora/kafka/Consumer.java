@@ -22,4 +22,6 @@ public interface Consumer {
      * Stops the consumer.
      */
     void shutdown();
+
+    boolean isReady();
 }

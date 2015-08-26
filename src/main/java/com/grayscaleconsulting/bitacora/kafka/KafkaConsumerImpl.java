@@ -33,6 +33,7 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.bitacora.kafka
     private final String zookeeperHosts;
     private DataManager dataManager;
     private int partitions;
+    private boolean ready;
 
     public KafkaConsumerImpl(String topic, String clientId, String zookeeperHosts, int partitions) {
         this.topic = topic;
@@ -84,6 +85,7 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.bitacora.kafka
             threadNumber++;
         }
         
+        ready = true;
     }
     
     public void setDataManager(DataManager dataManager) {
@@ -105,6 +107,10 @@ public class KafkaConsumerImpl implements com.grayscaleconsulting.bitacora.kafka
         props.put("auto.commit.interval.ms", "1000");
         props.put("auto.commit.enable", "false");
         return new ConsumerConfig(props);
+    }
+
+    public boolean isReady() {
+        return ready;
     }
     
 }
