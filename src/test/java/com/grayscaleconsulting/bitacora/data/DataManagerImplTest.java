@@ -56,13 +56,15 @@ public class DataManagerImplTest {
         TestUtils.waitUntilMetadataIsPropagated(servers, test_topic, 0, 5000);
         
         producer = new KafkaProducerImpl("localhost:"+kafkaPort, test_topic);
+        producer.start();
+        
         dataManager = new DataManagerImpl();
         dataManager.setProducer(producer);
 
         List<String> brokers = new ArrayList<>();
-        brokers.add("localhost");
+        brokers.add("localhost:"+kafkaPort);
         //KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
-        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, kafkaPort, test_topic, 0, zkServer.connectString());
+        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, test_topic, 0, zkServer.connectString());
         consumer.setDataManager(dataManager);
         consumer.start();
         

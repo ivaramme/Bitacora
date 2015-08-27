@@ -16,12 +16,15 @@ public class KafkaProducerImpl implements Producer {
     
     private final String brokerList;
     private final String topic;
-    private final KafkaProducer<String, String> producer;
+    private KafkaProducer<String, String> producer;
     
     public KafkaProducerImpl(String brokerList, String topic) {
         this.brokerList = brokerList;
         this.topic = topic;
-
+    }
+    
+    @Override
+    public void start() {
         producer = new KafkaProducer<String, String>(configure(brokerList));
     }
     

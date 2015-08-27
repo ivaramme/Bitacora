@@ -71,6 +71,7 @@ public class App {
         clusterMembership.initialize();
 
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);
+        kafkaProducer.start();
 
         DataManagerExternal externalData = new DataManagerExternalImpl(clusterMembership);
         DataManager dataManager = new DataManagerImpl();
@@ -81,12 +82,10 @@ public class App {
         List<String> brokers = new ArrayList<>();
         String[] _kafkaServers = brokerList.split(",");
         for(int ind = 0; ind < _kafkaServers.length; ind++) {
-            if(_kafkaServers[ind].length() > 0 && _kafkaServers[ind].indexOf(':') > -1) {
-                brokers.add(_kafkaServers[ind].split(":")[0]);
-            }
+            brokers.add(_kafkaServers[ind]);
         }
-        
-        Consumer consumer = new KafkaSimpleConsumerImpl(nodeName, brokers, 9092, topic, 0, zookeeperHosts);//KafkaConsumerImpl(topic, nodeName, zookeeperHosts, 1);
+
+        Consumer consumer = new KafkaSimpleConsumerImpl(nodeName, brokers, topic, 0, zookeeperHosts);//KafkaConsumerImpl(topic, nodeName, zookeeperHosts, 1);
         consumer.setDataManager(dataManager);
         consumer.start();
         

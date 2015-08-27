@@ -2,30 +2,27 @@ package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
-import kafka.common.TopicAndPartition;
+import kafka.producer.KeyedMessage;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.utils.MockTime;
-import kafka.utils.TestUtils;
-import kafka.utils.TestZKUtils;
-import kafka.utils.ZKStringSerializer$;
+import kafka.utils.*;
 import kafka.zk.EmbeddedZookeeper;
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.zookeeper.ZKUtil;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import scala.Int;
+import scala.*;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
-import scala.collection.JavaConverters.*;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+import static org.junit.Assert.*;
 
 public class KafkaSimpleConsumerImplTest {
     public static final int SLEEP_TIME = 600;
@@ -35,12 +32,15 @@ public class KafkaSimpleConsumerImplTest {
     private EmbeddedZookeeper zkServer;
     private ZkClient zkClient;
     private KafkaServer kafkaServer;
+    private KafkaServer kafkaServer2;
     private Buffer<KafkaServer> servers;
     private String test_topic = "test_topic";
     private DataManager dataManager;
     private int kafkaPort;
+    private int kafkaPort2;
     private List<String> brokers;
     private List<KafkaServer> kafkaServers;
+    private KafkaConfig config;
 
     @Before
     public void setup() throws Exception {
@@ -49,26 +49,35 @@ public class KafkaSimpleConsumerImplTest {
 
         kafkaPort = TestUtils.choosePort();
         Properties props = TestUtils.createBrokerConfig(0, kafkaPort, false);
-
-        KafkaConfig config = new KafkaConfig(props);
+        config = new KafkaConfig(props);
         MockTime mock = new MockTime();
         kafkaServer = TestUtils.createServer(config, mock);
 
+        kafkaPort2 = TestUtils.choosePort();
+        props = TestUtils.createBrokerConfig(1, kafkaPort2, false);
+        KafkaConfig config2 = new KafkaConfig(props);
+        mock = new MockTime();
+        kafkaServer2 = TestUtils.createServer(config2, mock);
+
         kafkaServers = new ArrayList<KafkaServer>();
         kafkaServers.add(kafkaServer);
+        kafkaServers.add(kafkaServer2);
         servers = JavaConversions.asScalaBuffer(kafkaServers);
 
-        TestUtils.createTopic(zkClient, test_topic, 1, 1, servers, new Properties());
+        TestUtils.createTopic(zkClient, test_topic, 1, 2, servers, new Properties());
         TestUtils.waitUntilMetadataIsPropagated(servers, test_topic, 0, 5000);
 
-        producer = new KafkaProducerImpl("localhost:"+ kafkaPort, test_topic);
+        producer = new KafkaProducerImpl("localhost:"+ kafkaPort+",localhost:"+kafkaPort2, test_topic);
+        producer.start();
+        
         dataManager = new DataManagerImpl();
         dataManager.setProducer(producer);
 
         brokers = new ArrayList<String>();
-        brokers.add("localhost");
-        //KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
-        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, kafkaPort, test_topic, 0, zkServer.connectString());
+        brokers.add("localhost:"+kafkaPort);
+        brokers.add("localhost:"+kafkaPort2);
+        
+        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, test_topic, 0, zkServer.connectString());
         consumer.setDataManager(dataManager);
         
         Thread.sleep(SLEEP_TIME);
@@ -81,22 +90,33 @@ public class KafkaSimpleConsumerImplTest {
         producer.shutdown();
 
         kafkaServer.shutdown();
+        kafkaServer2.shutdown();
+        
         zkClient.close();
         zkServer.shutdown();
     }
     
-    @Test
+    @Test (expected = RuntimeException.class)
     public void testKafkaServerDown() throws Exception {
         kafkaServer.shutdown();
+        kafkaServer2.shutdown();
         
         consumer.start();
         Thread.sleep(SLEEP_TIME);
-        assertFalse(consumer.isReady());
     }
 
     @Test
+    public void testKafkaOneServerDownOnly() throws Exception {
+        kafkaServer.shutdown();
+
+        consumer.start();
+        Thread.sleep(SLEEP_TIME);
+        assertTrue(consumer.isReady());
+    }
+
+    @Test (expected = RuntimeException.class)
     public void testInvalidTopic() throws Exception {
-        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, kafkaPort, "invalid_test", 0, zkServer.connectString());
+        consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, "invalid_test", 0, zkServer.connectString());
         consumer.start();
         Thread.sleep(SLEEP_TIME);
         assertFalse(consumer.isReady());
@@ -120,47 +140,75 @@ public class KafkaSimpleConsumerImplTest {
         assertEquals(18, ((KafkaSimpleConsumerImpl) consumer).getLastOffset(null, test_topic, 0, kafka.api.OffsetRequest.LatestTime(), "localhost-node"));
     }
     
-    @Ignore
-    public void testExistsWhenZookeperGoesDown() throws Exception {
+    @Test(expected = RuntimeException.class)
+    public void testExistsWhenUnableToReachKafkaGoesDown() throws Exception {
+        kafkaServer.shutdown();
+        kafkaServer2.shutdown();
         consumer.start();
-        ConcurrentHashMap.KeySetView sessions = (ConcurrentHashMap.KeySetView) zkServer.zookeeper().getZKDatabase().getSessions();
-        long sessionID = (Long) sessions.getMap().keySet().iterator().next();
-        zkServer.zookeeper().closeSession(sessionID);
+    }
+    
+    @Test
+    public void testExistsWhenUnableToReachZK() throws Exception {
+        zkServer.shutdown();
+        consumer.start();
+        assertFalse(consumer.isReady());
     }
 
-    @Ignore
+    @Test
     public void testElectsNewLeader() throws Exception {
-        // Create a new Kafka server for the same topic/partition and switch the leader
-        Properties props = TestUtils.createBrokerConfig(1, TestUtils.choosePort(), false);
-        KafkaConfig config = new KafkaConfig(props);
-        MockTime mock = new MockTime();
-        KafkaServer kafkaServer2 = TestUtils.createServer(config, mock);
+        consumer.start();
         
-        kafkaServers.add(kafkaServer2);
-        servers = JavaConversions.asScalaBuffer(kafkaServers);
+        dataManager.set("key", "value");
+        Thread.sleep(SLEEP_TIME);
+        assertNotNull(dataManager.get("key")); // consumer is working fine
 
-        TestUtils.createTopic(zkClient, "topic2", 1, 2, servers, new Properties());
-        TestUtils.waitUntilMetadataIsPropagated(servers, "topic2", 0, 5000);
+        Option leader = ZkUtils.getLeaderForPartition(zkClient, test_topic, 0);
+        KafkaServer leadServer;
+        KafkaServer slaveServer;
+        if(leader.isDefined() && ((Integer)leader.get() == 0)) {
+            leadServer = kafkaServer;
+            slaveServer = kafkaServer2;
+        } else {
+            leadServer = kafkaServer2;
+            slaveServer = kafkaServer;
+        }
+        assertEquals("localhost:"+leadServer.config().port(), ((KafkaSimpleConsumerImpl) consumer).getLeadBroker());
         
+        // shutdown first kafka server
+        leadServer.shutdown();
+        leadServer.awaitShutdown();
+
+        TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 5000, Option.apply((Integer)leader.get()), Option.empty());
+        TestUtils.waitUntilMetadataIsPropagated(servers, test_topic, 0, 5000);
+        Thread.sleep(5000); // Wait for consumer to catch up
+        
+        assertTrue(brokers.size() == 2);
+        assertNotEquals(leader, ZkUtils.getLeaderForPartition(zkClient, test_topic, 0));
+        assertEquals("localhost:"+slaveServer.config().port(), ((KafkaSimpleConsumerImpl) consumer).getLeadBroker());
+    }
+
+    @Test
+    public void testRecoversWhenKafkaGoesDownAndUp() throws Exception {
         consumer.start();
 
         dataManager.set("key", "value");
         Thread.sleep(SLEEP_TIME);
         assertNotNull(dataManager.get("key")); // consumer is working fine
 
-
-        Map _p = new HashMap<>();
-        _p.put(0,0);
-        _p.put(1,1);
-        scala.collection.immutable.Map partitions = (scala.collection.immutable.Map) JavaConversions.asScalaMap(_p);
-
-        TopicAndPartition topicAndPartition = new TopicAndPartition("topic2", 0);
-        TestUtils.makeLeaderForPartition(zkClient, "topic2", partitions, 1);
-
+        // shutdown first kafka server
+        kafkaServer.shutdown();
+        kafkaServer2.shutdown();
+        kafkaServer.awaitShutdown();
+        kafkaServer2.shutdown();
+        
+        TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 15000, Option.empty(), Option.apply(1));
+        
+        kafkaServer.startup();
+        
+        Thread.sleep(SLEEP_TIME);
         dataManager.set("key2", "value");
         Thread.sleep(SLEEP_TIME);
+        Thread.sleep(SLEEP_TIME);
         assertNotNull(dataManager.get("key2")); // consumer is still working
-        
-        kafkaServer2.shutdown();
     }
 }

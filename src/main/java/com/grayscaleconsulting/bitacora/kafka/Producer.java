@@ -8,6 +8,8 @@ import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
  * Created by ivaramme on 7/28/15.
  */
 public interface Producer {
+    void start();
+    
     /**
      * Publishes a key value object 
      * @param value

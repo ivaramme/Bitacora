@@ -24,10 +24,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -53,8 +50,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
     private String leadBroker;
     private String clientName;
     private boolean read = true;
-    private List<String> brokers;
-    private int port;
+    private List<String> brokers = new ArrayList<>();
     private String groupId;
     private kafka.javaapi.consumer.SimpleConsumer consumer;
     private long currentOffset;
@@ -65,6 +61,8 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
     private ZooKeeper zookeeper;
     private String zkConsumerNodeName;
     private String zookeperHosts;
+    
+    private Thread runner;
 
     private final Counter totalMessagesProcessed = 
             Metrics.getDefault().newCounter(KafkaSimpleConsumerImpl.class, "kafka-total-messages-processed");
@@ -75,12 +73,11 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
     private final Counter countErrors =
             Metrics.getDefault().newCounter(KafkaSimpleConsumerImpl.class, "kafka-count-errors");
 
-    public KafkaSimpleConsumerImpl(String groupId, List<String> brokers, int port, String topic, int partition, String zookeperHosts) {
+    public KafkaSimpleConsumerImpl(String groupId, List<String> brokers, String topic, int partition, String zookeperHosts) {
         checkArgument(!brokers.isEmpty(), "Kafka brokers cannot be empty.");
         
         this.groupId = groupId;
-        this.brokers = brokers;
-        this.port = port;
+        this.brokers.addAll(brokers);
         this.topic = topic;
         this.partition = partition;
         this.zookeperHosts = zookeperHosts;
@@ -93,17 +90,17 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
 
     @Override
     public void start() {
-        PartitionMetadata metadata = fetchTopicMetadata(brokers, port, topic, partition);
+        PartitionMetadata metadata = fetchTopicMetadata(brokers, topic, partition);
         if (metadata == null) {
             logger.error("Can't find metadata for Topic and Partition. Exiting");
-            return;
+            throw new RuntimeException("Can't find metadata for Topic and Partition");
         }
         if (metadata.leader() == null) {
             logger.error("Can't find Leader for Topic and Partition. Exiting");
-            return;
+            throw new RuntimeException("Can't find Leader for Topic and Partition. Exiting");
         }
         
-        leadBroker = metadata.leader().host();
+        leadBroker = metadata.leader().host()+":"+metadata.leader().port();
         clientName = groupId;
         zkConsumerNodeName = ZK_PARENT_NODE + "/" + clientName;
 
@@ -115,11 +112,13 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
             throw new RuntimeException("Unable to start zookeeper");
         }
 
-        new Thread(this).start();
+        runner = new Thread(this);
+        runner.start();
     }
 
     private int zkRetries = 0;
     private void initializeZookeeper(String zookeeperHosts) throws IOException {
+        logger.info("Initializing Zookeeper connection.");
         zookeeper = new ZooKeeper(zookeeperHosts, 2500, new Watcher() {
             @Override
             public void process(WatchedEvent event) {
@@ -130,9 +129,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                     if(zkRetries < MAX_ERRORS) {
                         try {
                             initializeZookeeper(zookeeperHosts);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                        } catch (Exception e) { }
                         zkRetries++;
                     } else {
                         logger.error("Unable to reconnect to zookeeper");
@@ -143,9 +140,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                     if(zkRetries < MAX_ERRORS) {
                         try {
                             initializeZookeeper(zookeeperHosts); // retry
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        } catch (IOException e) { }
                         zkRetries++;
                     } else {
                         logger.error("Unable to create a new session in zookeeper, going down");
@@ -163,7 +158,13 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
     }
 
     public void run() {
-        consumer = new kafka.javaapi.consumer.SimpleConsumer(leadBroker, port, 100000, 64 * 1024, clientName);
+        String hostname = leadBroker.split(":")[0];
+        int port = 9092;
+        try{
+            port = Integer.parseInt(leadBroker.split(":")[1]);
+        } catch (NumberFormatException nfe) {}
+        
+        consumer = new kafka.javaapi.consumer.SimpleConsumer(hostname, port, 100000, 64 * 1024, clientName);
         long readOffset = getConsumerOffset();//getLastOffset(consumer, topic, partition, kafka.api.OffsetRequest.LatestTime(), clientName);
 
         logger.info("Starting topic read from: " + readOffset);
@@ -172,23 +173,48 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
         int numErrors = 0;
         while (read) {
             if (consumer == null) {
-                consumer = new SimpleConsumer(leadBroker, port, 100000, 64 * 1024, clientName);
+                logger.info("Creating a new Consumer instance.");
+                hostname = leadBroker.split(":")[0];
+                port = 9092;
+                try{
+                    port = Integer.parseInt(leadBroker.split(":")[1]);
+                } catch (NumberFormatException nfe) {}
+                consumer = new kafka.javaapi.consumer.SimpleConsumer(hostname, port, 100000, 64 * 1024, clientName);
             }
 
             kafka.api.FetchRequest req = new FetchRequestBuilder()
                     .clientId(clientName)
                     .addFetch(topic, partition, readOffset, 100000) // Note: this fetchSize of 100000 might need to be increased if large batches are written to Kafka
                     .build();
-            FetchResponse fetchResponse = consumer.fetch(req);
+
+            FetchResponse fetchResponse = null;
+            try {
+                logger.info("Fetching data from Kafka");
+                fetchResponse = consumer.fetch(req);
+            } catch (Exception ce) {
+                logger.error("Unable to fetch data from consumer");
+                consumer.close();
+                consumer = null;
+                try {
+                    logger.info("Finding a new leader");
+                    leadBroker = findNewLeader(leadBroker, topic, partition);
+                } catch (Exception e) {
+                    logger.error("Unable to find a new leader");
+                }
+                continue;
+            }
 
             // Error found while fetching messages, try to see if there's a new leader
-            if (fetchResponse.hasError()) {
+            if (null != fetchResponse && fetchResponse.hasError()) {
                 countErrors.inc();
                 numErrors++;
                 short code = fetchResponse.errorCode(topic, partition);
                 logger.error("Error fetching data from the Broker:" + leadBroker + " Reason: " + code);
 
-                if (numErrors > MAX_ERRORS) break;
+                if (numErrors > MAX_ERRORS) {
+                    throw new RuntimeException("Can't get in touch with a Kafka broker, don't know what else to do.");
+                }
+                
                 if (code == ErrorMapping.OffsetOutOfRangeCode()) {
                     // Reload offset
                     readOffset = getConsumerOffset();//getLastOffset(consumer, topic, partition, kafka.api.OffsetRequest.LatestTime(), clientName);
@@ -198,10 +224,10 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                 consumer.close();
                 consumer = null;
                 try {
-                    leadBroker = findNewLeader(leadBroker, topic, partition, port);
+                    leadBroker = findNewLeader(leadBroker, topic, partition);
                     continue;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
             numErrors = 0;
@@ -260,7 +286,8 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
             }
         }
 
-        if (consumer != null) consumer.close();
+        logger.info("Finalizing thread");
+        ready = false;
     }
     
     public void persistOffset(long readOffset, SimpleConsumer consumer) {
@@ -307,7 +334,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                               long whichTime, String clientName) {
         if(null == simpleConsumer)
             simpleConsumer = consumer;
-        
+
         TopicAndPartition topicAndPartition = new TopicAndPartition(topic, partition);
         Map<TopicAndPartition, PartitionOffsetRequestInfo> requestInfo = new HashMap<>();
         requestInfo.put(topicAndPartition, new PartitionOffsetRequestInfo(whichTime, 1));
@@ -329,12 +356,11 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
      * Returns metadata information about a topic and partition partition
      *
      * @param seedBrokers
-     * @param port
      * @param topic
      * @param partition
      * @return
      */
-    private PartitionMetadata fetchTopicMetadata(List<String> seedBrokers, int port, String topic, int partition) {
+    private PartitionMetadata fetchTopicMetadata(List<String> seedBrokers, String topic, int partition) {
         PartitionMetadata returnMetaData = null;
         List<String> topics = Collections.singletonList(topic);
         TopicMetadataRequest req = new TopicMetadataRequest(topics);
@@ -343,7 +369,18 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
         for (String seed : seedBrokers) {
             SimpleConsumer consumer = null;
             try {
-                consumer = new SimpleConsumer(seed, port, 100000, 64 * 1024, "leaderLookup");
+                String host = "";
+                int port = 9092;
+                if(seed.indexOf(':') == -1) {
+                    host = seed;
+                } else {
+                    try {
+                        host = seed.split(":")[0];
+                        port = Integer.valueOf(seed.split(":")[1]);
+                    }catch (NumberFormatException nfe) { }
+                }
+                
+                consumer = new SimpleConsumer(host, port, 100000, 64 * 1024, "leaderLookup");
 
                 kafka.javaapi.TopicMetadataResponse resp = consumer.send(req);
                 logger.info("Looking for topic/partition information from broker " + seed);
@@ -369,7 +406,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
             logger.info("Updating list of replicas for topic " + topic + " and partition " + partition);
             brokers.clear();
             for (kafka.cluster.Broker replica : returnMetaData.replicas()) {
-                brokers.add(replica.host());
+                brokers.add(replica.host() + ":" + replica.port());
             }
         }
         return returnMetaData;
@@ -381,32 +418,32 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
      * @param a_oldLeader
      * @param a_topic
      * @param a_partition
-     * @param a_port
      * @return
      * @throws Exception
      */
-    private String findNewLeader(String a_oldLeader, String a_topic, int a_partition, int a_port) throws Exception {
+    private String findNewLeader(String a_oldLeader, String a_topic, int a_partition) throws Exception {
         for (int i = 0; i < 3; i++) {
             boolean goToSleep = false;
-            PartitionMetadata metadata = fetchTopicMetadata(brokers, a_port, a_topic, a_partition);
+            PartitionMetadata metadata = fetchTopicMetadata(brokers, a_topic, a_partition);
             if (metadata == null) {
                 goToSleep = true;
             } else if (metadata.leader() == null) {
                 goToSleep = true;
-            } else if (a_oldLeader.equalsIgnoreCase(metadata.leader().host()) && i == 0) {
+            } else if (a_oldLeader.equalsIgnoreCase(metadata.leader().host()+":"+metadata.leader().port()) && i == 0) {
                 // first time through if the leader hasn't changed give ZooKeeper a second to recover
                 // second time, assume the broker did recover before failover, or it was a non-Broker issue
                 //
                 goToSleep = true;
             } else {
-                String leader = metadata.leader().host();
+                String leader = metadata.leader().host()+":"+metadata.leader().port();
                 logger.info("Found leader for topic: " + a_topic + " and partition: " + a_partition + ": " + leader);
                 return leader;
             }
             if (goToSleep) {
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(500);
                 } catch (InterruptedException ie) {
+                    ie.printStackTrace();
                 }
             }
         }
@@ -438,7 +475,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                                 createZKNode(path, (byte[]) ctx); // retry in cse of connection error
                                 break;
                             case NODEEXISTS:
-                                logger.info("Nodes already created");
+                                logger.info("Node already created");
                                 break;
                             case OK:
                                 logger.info("Node created");
@@ -466,7 +503,6 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                 createZKNode(zkConsumerNodeName, new byte[0]);
                 return ZK_ACTION_RETRY;
             }
-            e.printStackTrace();
         }
 
         return ZK_ACTION_OK;
@@ -493,10 +529,13 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                     ((KeeperException) e).code() == KeeperException.Code.NONODE) {
                 logger.info("No offset registered for this node, it doesn't exist");
             }
-            e.printStackTrace();
+            //e.printStackTrace();
         }
 
         return getLastOffset(consumer, topic, partition, kafka.api.OffsetRequest.EarliestTime(), clientName);
     }
 
+    public String getLeadBroker() {
+        return leadBroker;
+    }
 }
