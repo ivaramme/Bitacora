@@ -2,18 +2,13 @@ package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
-import kafka.producer.KeyedMessage;
+
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.*;
 import kafka.zk.EmbeddedZookeeper;
 import org.I0Itec.zkclient.ZkClient;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.zookeeper.ZKUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import scala.*;
+import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
 
@@ -21,6 +16,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import static org.junit.Assert.*;
 
@@ -204,11 +203,13 @@ public class KafkaSimpleConsumerImplTest {
         TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 15000, Option.empty(), Option.apply(1));
         
         kafkaServer.startup();
-        
+
         Thread.sleep(SLEEP_TIME);
         dataManager.set("key2", "value");
         Thread.sleep(SLEEP_TIME);
         Thread.sleep(SLEEP_TIME);
         assertNotNull(dataManager.get("key2")); // consumer is still working
     }
+    
+    
 }
