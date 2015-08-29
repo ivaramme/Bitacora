@@ -3,6 +3,7 @@ package com.grayscaleconsulting.bitacora.data.external;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -19,7 +20,6 @@ import java.util.List;
 import java.util.concurrent.*;
 
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
-import com.grayscaleconsulting.bitacora.rpc.RPCUtils;
 
 /**
  * Represents a formal request to other nodes for an specific piece of data. 
@@ -65,7 +65,7 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
             requests.add(new Callable<HttpResponse>() {
                 @Override
                 public HttpResponse call() throws Exception {
-                    HttpGet request = new HttpGet("http://"+endpoint + RPCUtils.RPC_CLUSTER_ENDPOINT+"?key=" + key);
+                    HttpGet request = new HttpGet("http://"+endpoint + HttpRPCHandler.RPC_CLUSTER_ENDPOINT+"?key=" + key);
                     try {
                         return client.execute(request);
                     }
