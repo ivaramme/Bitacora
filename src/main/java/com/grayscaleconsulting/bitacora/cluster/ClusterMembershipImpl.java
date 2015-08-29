@@ -85,15 +85,18 @@ public class ClusterMembershipImpl implements ClusterMembership {
             logger.info("Registered as /"+NODE_AVAILABLE_SERVERS+"/"+registrationName);
             
             watchForNodes();
-        } catch (KeeperException|InterruptedException ke) {
+        } catch (KeeperException ke) {
             registered = false;
             logger.error("Error registering node: " + ke);
-            if(!(ke instanceof KeeperException.NodeExistsException)) { // NodeExistsException
                 ke.printStackTrace();
+            if(ke instanceof KeeperException.SessionExpiredException) { // NodeExistsException
                 // throw new Exception("Unable to register node, something happened: " + ke.getMessage());
                 Thread.sleep(1000);
-                registerNode();
+                initialize();
             }
+
+        } catch (InterruptedException ie) {
+            logger.error("Interrupted exception while registering node: " + ie);
         }
         
         return registered;
