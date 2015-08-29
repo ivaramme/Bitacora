@@ -3,6 +3,7 @@ package com.grayscaleconsulting.bitacora.kafka;
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.util.Utils;
 import com.yammer.metrics.core.Counter;
 import kafka.api.FetchRequestBuilder;
 import kafka.javaapi.FetchResponse;
@@ -189,7 +190,6 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
 
             FetchResponse fetchResponse = null;
             try {
-                logger.info("Fetching data from Kafka");
                 fetchResponse = consumer.fetch(req);
             } catch (Exception ce) {
                 logger.error("Unable to fetch data from consumer");
@@ -243,34 +243,30 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                 ByteBuffer payload = messageAndOffset.message().payload();
 
                 // Read message
-                byte[] bytes = new byte[payload.limit()];
+                byte[] bytes = new byte[payload.remaining()];
                 payload.get(bytes);
+                
+                logger.info("New consumer's offset: {}", String.valueOf(messageAndOffset.offset()));
+                currentOffset = readOffset;
+                KeyValue value = Utils.convertToKeyValue(bytes);
 
-                try {
-                    String message = new String(bytes, "UTF-8");
-                    logger.info(String.valueOf(messageAndOffset.offset()) + ": " + message);
-                    currentOffset = readOffset;
-                    
-                    if(KeyValue.isValidKeyValue(message)) {
-                        String[] vals = message.split("\\"+String.valueOf(KeyValue.SEPARATOR));
-                        KeyValue value = KeyValue.createKeyValueFromLog(vals[0], vals[1], Long.valueOf(vals[2]), Integer.valueOf(vals[4]), vals[3]);
-                        // sets value in local datastore
-                        if(null != dataManager) {
-                            dataManager.setFromLog(value);
-                        }
+                if(null != value) {
+                    // sets value in local datastore
+                    if(null != dataManager) {
+                        dataManager.setFromLog(value);
+                    }
 
-                        totalValidMessagesProcessed.inc();
-                    }
-                    
-                    // Persist to Zookeeper only every 10 messages
-                    if ((processedMessages % 10) == 0) {
-                        persistOffset(currentOffset, consumer);
-                        countOffsetUpdates.inc();
-                    }
-                } catch (UnsupportedEncodingException e) {
-                    logger.error("Error while parsing message: " + e);
-                    e.printStackTrace();
+                    totalValidMessagesProcessed.inc();
+                } else {
+                    logger.error("Error while parsing message, serialization came back null ");
                 }
+
+                // Persist to Zookeeper only every 10 messages
+                if ((processedMessages % 10) == 0) {
+                    persistOffset(currentOffset, consumer);
+                    countOffsetUpdates.inc();
+                }
+                
                 numRead++;
                 processedMessages++;
 

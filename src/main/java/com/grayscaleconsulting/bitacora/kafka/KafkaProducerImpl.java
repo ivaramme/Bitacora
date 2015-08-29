@@ -1,6 +1,7 @@
 package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.util.Utils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
@@ -16,7 +17,7 @@ public class KafkaProducerImpl implements Producer {
     
     private final String brokerList;
     private final String topic;
-    private KafkaProducer<String, String> producer;
+    private KafkaProducer<String, byte[]> producer;
     
     public KafkaProducerImpl(String brokerList, String topic) {
         this.brokerList = brokerList;
@@ -25,14 +26,20 @@ public class KafkaProducerImpl implements Producer {
     
     @Override
     public void start() {
-        producer = new KafkaProducer<String, String>(configure(brokerList));
+        producer = new KafkaProducer<String, byte[]>(configure(brokerList));
     }
-    
+
     @Override
     public void publish(KeyValue value) {
         if(null != producer) {
-            ProducerRecord<String, String> data = new ProducerRecord<String, String>(topic, value.getKey(), value.serialize());
-            producer.send(data);
+            
+            byte[] data = Utils.convertToAvro(value);
+            if(null != data) {
+                ProducerRecord<String, byte[]> message = new ProducerRecord<String, byte[]>(topic, value.getKey(), data);
+                producer.send(message);
+            } else {
+                logger.error("Unable to send this message: {}", value);
+            }
         }
     }
 
@@ -46,18 +53,28 @@ public class KafkaProducerImpl implements Producer {
     @Override
     public void publish(String key, Object value) {
         if(null != producer) {
-            ProducerRecord<String, String> data = new ProducerRecord<String, String>(topic, key, (String) value);
-            producer.send(data);
+            byte[] payload = null;
+            if(null != value && value instanceof KeyValue) {
+                payload = Utils.convertToAvro((KeyValue) value);
+            }
+
+            if(null != payload) {
+                ProducerRecord<String, byte[]> message = new ProducerRecord<String, byte[]>(topic, key, payload);
+                producer.send(message);
+            } else {
+                logger.error("Unable to send this message: {}", value);
+            }
         }
     }
-    
+
     public Properties configure(String brokerList) {
         Properties props = new Properties();
         props.put("bootstrap.servers", brokerList);
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        //props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("request.required.acks", "1");
-        
+        props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer");
+
         return props;
     }
     

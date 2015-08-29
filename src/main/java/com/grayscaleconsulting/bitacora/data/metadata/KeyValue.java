@@ -70,6 +70,10 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
         return new KeyValue(key, value, timestamp, SOURCE_PRODUCER, ttl);
     }
 
+    public static KeyValue createNewKeyValue(String key, String value, long timestamp, long ttl, int source) {
+        return new KeyValue(key, value, timestamp, source, ttl);
+    }
+
     public String getKey() {
         return key;
     }
