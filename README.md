@@ -91,4 +91,22 @@ The docker base image is included in the repo, located inside: `src/main/docker/
 
 # AVRO RPC
 
-A binary, socket based RPC handler exists that uses AVRO for communication and schema definition but it is truly a work in progress. Eventually more AVRO should be included in more parts of the project to take advantage of its benefits.
+A binary, socket based RPC handler exists that uses AVRO for communication and schema definition.
+
+The client works as follows:
+
+- Connects to Zookeeper (same ZK cluster that the nodes connect to) and gets the list of available servers.
+
+- Chooses one randomly and connects to it. In case of disconnection retries or throws an exception. There should be some load balancing in place.
+
+- Invokes RPC methods directly, throws a custom exception in case of errors.
+
+- Handles only operations for read, set and delete.
+
+# High Availability:
+
+Since the project implements two flavors for communication (Binary RPC and HTTP API) the options are:
+
+- HTTP API: put all nodes behind a load balancer and let it do its magic. HTTP API exposes a basic endpoint for health status under /health
+
+- RPC: the client uses zookeeper to maintain updates of the nodes that are available. More logic needs to be added in terms of load balancing as it currently chooses a random server.

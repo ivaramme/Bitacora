@@ -2,13 +2,13 @@ package com.grayscaleconsulting.bitacora.cluster;
 
 import com.google.common.base.Preconditions;
 import com.grayscaleconsulting.bitacora.cluster.nodes.Node;
+import com.grayscaleconsulting.bitacora.util.Utils;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -24,7 +24,6 @@ import static com.google.common.base.Preconditions.checkState;
  * Created by ivaramme on 7/1/15.
  */
 public class ClusterMembershipImpl implements ClusterMembership {
-    public static final String NODE_AVAILABLE_SERVERS = "memdb-nodes";
     private static Logger logger = LoggerFactory.getLogger(ClusterMembershipImpl.class);
     
     private ZooKeeper zooKeeper;
@@ -34,13 +33,28 @@ public class ClusterMembershipImpl implements ClusterMembership {
     private String registrationName;
     private String nodeName;
     private int apiPort;
+    private String socketEndpoint;
     private List<Node> nodesAvailable = new CopyOnWriteArrayList<>();
 
     public ClusterMembershipImpl(String zkHosts, String nodeName, int apiPort) {
+        this(zkHosts, nodeName, apiPort, -1);
+    }
+    
+    /**
+     * Creates a new instance of a ClusterMembership class
+     * * 
+     * @param zkHosts String connection to access ZK servers
+     * @param nodeName Name to make accessible this node from other nodes.
+     * @param apiPort Port to listen to for HTTP access.
+     * @param socketPort Port to listen to for Socket Based access. If not used, passed -1
+     */
+    public ClusterMembershipImpl(String zkHosts, String nodeName, int apiPort, int socketPort) {
         this.zkHosts = zkHosts;
         this.registrationName = nodeName + ":" + apiPort;
         this.nodeName = nodeName;
         this.apiPort = apiPort;
+        if(socketPort > 0)
+            this.socketEndpoint = nodeName + ":" + socketPort;
     }
 
     public void initialize() {
@@ -56,7 +70,9 @@ public class ClusterMembershipImpl implements ClusterMembership {
                                 initialize();
                             } else if(event.getState().equals(Event.KeeperState.SyncConnected)) {
                                 try {
-                                    createParentZNode("/"+NODE_AVAILABLE_SERVERS, new byte[0]);
+                                    createParentZNode(Utils.BASE_NODE_NAME, new byte[0]);
+                                    createParentZNode(Utils.AVAILABLE_SERVERS, new byte[0]);
+                                    createParentZNode(Utils.SOCKET_AVAILABLE_SERVERS, new byte[0]);
                                     registerNode();
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -79,10 +95,15 @@ public class ClusterMembershipImpl implements ClusterMembership {
 
         // Sync request for creation as you want to make sure it works
         try {
-            zooKeeper.create("/"+NODE_AVAILABLE_SERVERS+"/"+registrationName, registrationName.getBytes(), ZooDefs.Ids.READ_ACL_UNSAFE,
+            zooKeeper.create(Utils.AVAILABLE_SERVERS + "/" +registrationName, registrationName.getBytes(), ZooDefs.Ids.READ_ACL_UNSAFE,
                     CreateMode.EPHEMERAL);
             registered = true;
-            logger.info("Registered as /"+NODE_AVAILABLE_SERVERS+"/"+registrationName);
+            logger.info("Registered as " + Utils.AVAILABLE_SERVERS +"/"+registrationName);
+            
+            if(null != socketEndpoint) {
+                zooKeeper.create(Utils.SOCKET_AVAILABLE_SERVERS +"/"+socketEndpoint, socketEndpoint.getBytes(), ZooDefs.Ids.READ_ACL_UNSAFE,
+                        CreateMode.EPHEMERAL);
+            }
             
             watchForNodes();
         } catch (KeeperException ke) {
@@ -104,7 +125,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
 
     @Override
     public void watchForNodes() {
-        internalGetChildren(NODE_AVAILABLE_SERVERS);
+        internalGetChildren(Utils.AVAILABLE_SERVERS);
     }
 
     @Override
@@ -151,7 +172,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
                             // Update list of nodes, skip itself
                             List<Node> nodesFound = children.stream()
                                     .filter(nodename -> !nodename.equals(registrationName))
-                                    .map(nodename -> new Node(nodename.substring(0, nodename.indexOf(':')), nodename) )
+                                    .map(nodename -> new Node(nodename.substring(0, nodename.indexOf(':')), nodename))
                                     .collect(Collectors.toList());
 
                             // Keep stats for existing nodes

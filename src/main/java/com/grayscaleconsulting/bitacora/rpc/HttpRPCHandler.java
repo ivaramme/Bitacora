@@ -5,9 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
 
+import com.grayscaleconsulting.bitacora.kafka.Consumer;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
-import org.apache.http.HttpResponse;
 import org.mortbay.jetty.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,23 +26,34 @@ import java.io.IOException;
 public class HttpRPCHandler extends AbstractHandler {
     protected static final Logger logger = LoggerFactory.getLogger(HttpRPCHandler.class);
 
+    public static final String HEALTH_ENDPOINT      = "/health";
     public static final String RPC_ENDPOINT         = "/rpc";
     public static final String RPC_CLUSTER_ENDPOINT = "/rpc/cluster";
 
     private final Counter requests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-requests");
     private final Counter clusterRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-cluster-requests");
     private final Counter publicRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-public-requests");
+    private final Counter missedRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-missedRequests-requests");
+    private final Counter errors = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-error-requests");
 
     private Gson jsonParser;
     private DataManager dataManager;
+    private Consumer consumer;
     
-    public HttpRPCHandler(DataManager dataManager) {
+    public HttpRPCHandler(DataManager dataManager, final Consumer consumer) {
         this.dataManager = dataManager;
+        this.consumer = consumer;
         jsonParser = new GsonBuilder().create();
     }
     
     @Override
     public void handle(String endpoint, HttpServletRequest req, HttpServletResponse resp, int i) throws IOException, ServletException {
+        if(endpoint.startsWith(HEALTH_ENDPOINT)) {
+            returnHealth(resp);
+            resp.flushBuffer();
+            return;
+        }
+        
         if(endpoint.startsWith(RPC_ENDPOINT) || endpoint.startsWith(RPC_CLUSTER_ENDPOINT)) {
             logger.info("New request for endpoint: " + endpoint);
             requests.inc();
@@ -71,8 +82,9 @@ public class HttpRPCHandler extends AbstractHandler {
                     KeyValue keyValue = dataManager.getRaw(key, forwardRPCRequest);
                     if (null == keyValue) {
                         logger.info(key + " was not found, returning null value");
+                        missedRequests.inc();
                         clusterRequests.inc();
-                        sendErrorResponse(resp, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key "+ key +" not found\"} ");
+                        sendErrorResponse(resp, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key " + key + " not found\"} ");
                     } else {
                         publicRequests.inc(); // public requests will always forward
                         sendResponse(keyValue, resp, forwardRPCRequest);
@@ -98,14 +110,17 @@ public class HttpRPCHandler extends AbstractHandler {
                 } else {
                     logger.info("Unknown method for endpoint: " + endpoint + " -> " + req.getMethod());
                     sendErrorResponse(resp, HttpServletResponse.SC_NOT_IMPLEMENTED);
+                    errors.inc();
                 }
             } catch (IOException ioe) {
                 logger.error("Error sending response to request. ");
                 ioe.printStackTrace();
+                errors.inc();
             }
         }else {
             logger.info("Invalid endpoint: " + endpoint);
             sendErrorResponse(resp, HttpServletResponse.SC_NOT_IMPLEMENTED);
+            errors.inc();
         }
         resp.flushBuffer();
     }
@@ -126,5 +141,15 @@ public class HttpRPCHandler extends AbstractHandler {
         resp.setContentType("application/json");
         resp.setStatus(code);
         resp.getWriter().print(message);
+    }
+    
+    protected void returnHealth(HttpServletResponse resp) throws IOException {
+        if((null != dataManager) && (null != consumer) && (consumer.isReady())) {
+            resp.setStatus(200);
+            resp.getWriter().print("OK");
+        } else {
+            resp.setStatus(500);
+            resp.getWriter().print("DOWN");
+        }
     }
 }

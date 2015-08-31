@@ -34,7 +34,25 @@ public class AvroSocketRPCHandler implements RPCHandlerAvro {
 
     @Override
     public CharSequence getValue(CharSequence key) throws AvroRemoteException {
-        logger.info("SocketRPCServer:getValue " + key.toString());
+        logger.info("AvroRPCServer:getValue {}",key.toString());
         return dataManager.get(key.toString());
+    }
+
+    @Override
+    public Void setValue(CharSequence key, CharSequence value) throws AvroRemoteException {
+        logger.info("AvroRPCServer:setValue for key {}" + key.toString() );
+        dataManager.set(key.toString(), value.toString());
+        return null;
+    }
+
+    @Override
+    public Void delete(CharSequence key) throws AvroRemoteException {
+        logger.info("AvroRPCServer:deleteValue for key {}" + key.toString() );
+        dataManager.delete(key.toString());
+        return null;
+    }
+
+    public void shutdown() {
+        server.close();
     }
 }

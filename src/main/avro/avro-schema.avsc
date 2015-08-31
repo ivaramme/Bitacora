@@ -17,25 +17,16 @@
                     "doc" : "Fetches the value associated to a given key",
                     "request" : [{ "name" : "key", "type" : "string" }],
                     "response" : ["null", "string"]
-                }
-        /*,
-        "getRawValue" : {
-                            "doc" : "Fetches the value associated to a given key",
-                            "request" : [{ "name" : "key", "type" : "string" }],
-                            "response" : "KeyValueRawAvro"
-                        }
-        ,
+                },
         "setValue" : {
-                            "doc" : "Fetches the value associated to a given key",
+                            "doc" : "Creates a key-value association. Overwrites if it already exists.",
                             "request" : [{ "name" : "key", "type" : "string" }, { "name" : "value", "type" : "string" } ],
-                            "response" : "string"
-                        }
-        ,
+                            "response" : "null"
+                },
         "delete" : {
-                             "doc" : "Fetches the value associated to a given key",
-                             "request" : [{ "name" : "key", "type" : "string" } ]
-                         }
-
-        */
+                             "doc" : "Deletes the value associated to the given key",
+                             "request" : [{ "name" : "key", "type" : "string" } ],
+                             "response" : "null"
+                }
     }
 }

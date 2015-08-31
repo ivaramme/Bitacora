@@ -24,7 +24,7 @@ import java.util.List;
  *
  * Created by ivaramme on 7/1/15.
  */
-public class App {
+public class Bitacora {
     public static void main(String[] args) throws Exception {
 
         //Address of the zookeeper host
@@ -49,7 +49,7 @@ public class App {
         int avroPort = apiPort + 1;
         if (null != System.getenv("AVRO_PORT")) {
             try {
-                apiPort = Integer.valueOf(System.getenv("AVRO_PORT"));
+                avroPort = Integer.valueOf(System.getenv("AVRO_PORT"));
             } catch (NumberFormatException nfe) {
             }
         }
@@ -67,7 +67,7 @@ public class App {
         Metrics.initJmxReporter();
 
         // Instantiate objects to execute service
-        ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeName, apiPort);
+        ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeName, apiPort, avroPort);
         clusterMembership.initialize();
 
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);
@@ -95,7 +95,7 @@ public class App {
         
         // Start HTTP RPC server
         Server server = new Server();
-        server.addHandler(new HttpRPCHandler(dataManager));
+        server.addHandler(new HttpRPCHandler(dataManager, consumer));
         server.setStopAtShutdown(true);
         
         SelectChannelConnector connector0 = new SelectChannelConnector();

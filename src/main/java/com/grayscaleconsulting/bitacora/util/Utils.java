@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
 
 /**
  * Created by ivaramme on 8/27/15.
@@ -21,6 +19,11 @@ import java.nio.ByteBuffer;
 public class Utils {
     private static Logger logger = LoggerFactory.getLogger(Utils.class);
     
+    public static final String BASE_NODE_NAME = "/bitacora";
+    public static final String AVAILABLE_SERVERS = BASE_NODE_NAME+"/servers";
+    public static final String SOCKET_AVAILABLE_SERVERS = BASE_NODE_NAME+"/sockets";
+    public static final String SOCKET_CONNECTION_COUNT = Utils.SOCKET_AVAILABLE_SERVERS + "/connections";
+
     public static byte[] convertToAvro(KeyValue keyValue) {
         KeyValueRawAvro rawData = new KeyValueRawAvro();
         rawData.setKey(keyValue.getKey());
@@ -35,15 +38,15 @@ public class Utils {
             Encoder encoder = EncoderFactory.get().binaryEncoder(bao, null);
             new SpecificDatumWriter<>(rawData.getSchema()).write(rawData, encoder);
             encoder.flush();
-            
+
             return bao.toByteArray();
         } catch (IOException e) {
             logger.error("Error converting message to Raw Bytes");
         }
-        
+
         return null;
     }
-    
+
     public static KeyValue convertToKeyValue(byte[] bytes) {
         try {
             KeyValueRawAvro rawValue = new SpecificDatumReader<>(KeyValueRawAvro.class).read(
