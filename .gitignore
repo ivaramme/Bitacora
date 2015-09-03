@@ -1,6 +1,7 @@
 .idea
-Streaming.iml
+*.iml
 target
 .DS_Store
 *Avro.java
-avrogenerated/
+avro/
+*.db/

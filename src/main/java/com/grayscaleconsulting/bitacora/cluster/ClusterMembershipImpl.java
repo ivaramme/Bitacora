@@ -176,7 +176,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
                                     .collect(Collectors.toList());
 
                             // Keep stats for existing nodes
-                            // TODO: think of moving this to the metrics module instead of this.
+                            // TODO: think of moving this to the registry module instead of this.
                             nodesFound.forEach(node -> {
                                 for(Node n : nodesAvailable) {
                                     if(n.getName().equalsIgnoreCase(node.getName())) {

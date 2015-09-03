@@ -7,16 +7,19 @@ import com.yammer.metrics.reporting.JmxReporter;
  * Created by ivaramme on 8/9/15.
  */
 public class Metrics {
-    public static final MetricsRegistry metrics = new MetricsRegistry();
-    private static JmxReporter reporter;
+    public static MetricsRegistry registry;
 
     public static MetricsRegistry getDefault() {
-        return metrics;
+        if(null == registry)
+            initJmxReporter();
+        
+        return registry;
     }
     
     public static void initJmxReporter() {
-        if(null == metrics) {
-            JmxReporter.startDefault(metrics);
+        if(null == registry) {
+            Metrics.registry = new MetricsRegistry();
+            JmxReporter.startDefault(registry);
         }
     }
 }

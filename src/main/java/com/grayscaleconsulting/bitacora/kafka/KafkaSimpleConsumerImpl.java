@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -166,7 +165,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
         } catch (NumberFormatException nfe) {}
         
         consumer = new kafka.javaapi.consumer.SimpleConsumer(hostname, port, 100000, 64 * 1024, clientName);
-        long readOffset = getConsumerOffset();//getLastOffset(consumer, topic, partition, kafka.api.OffsetRequest.LatestTime(), clientName);
+        long readOffset = getConsumerOffset();
 
         logger.info("Starting topic read from: " + readOffset);
 
@@ -217,7 +216,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                 
                 if (code == ErrorMapping.OffsetOutOfRangeCode()) {
                     // Reload offset
-                    readOffset = getConsumerOffset();//getLastOffset(consumer, topic, partition, kafka.api.OffsetRequest.LatestTime(), clientName);
+                    readOffset = getConsumerOffset();
                     continue;
                 }
 
@@ -525,7 +524,6 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                     ((KeeperException) e).code() == KeeperException.Code.NONODE) {
                 logger.info("No offset registered for this node, it doesn't exist");
             }
-            //e.printStackTrace();
         }
 
         return getLastOffset(consumer, topic, partition, kafka.api.OffsetRequest.EarliestTime(), clientName);

@@ -71,9 +71,8 @@ public class KafkaProducerImpl implements Producer {
         Properties props = new Properties();
         props.put("bootstrap.servers", brokerList);
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        //props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("request.required.acks", "1");
         props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer");
+        props.put("request.required.acks", "1");
 
         return props;
     }

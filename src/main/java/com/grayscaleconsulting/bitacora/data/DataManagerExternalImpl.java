@@ -57,7 +57,7 @@ public class DataManagerExternalImpl implements DataManagerExternal {
         try {
             nodes = clusterMembership.getAvailableNodes();
         } catch (IllegalStateException e) {
-            logger.error("Unable to fetch available nodes as node is not registered in cluster");
+            logger.error("Unable to fetch available nodes as node is not registered in cluster: {}", e);
         }
 
         if(null != nodes) {

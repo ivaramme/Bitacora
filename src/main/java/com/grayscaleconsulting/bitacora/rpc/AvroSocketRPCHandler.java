@@ -20,18 +20,20 @@ import org.slf4j.LoggerFactory;
 public class AvroSocketRPCHandler implements RPCHandlerAvro {
     private static final Logger logger = LoggerFactory.getLogger(AvroSocketRPCHandler.class);
     
-    private final Server server;
+    private Server server;
     private final DataManager dataManager;
     private final int port;
 
     public AvroSocketRPCHandler(DataManager dataManager, int port) {
         this.dataManager = dataManager;
         this.port = port;
-        
+    }
+
+    public void start() {
         logger.info("Starting Avro socket server port: " + port);
         server = new NettyServer(new SpecificResponder(RPCHandlerAvro.class, this), new InetSocketAddress(port));
     }
-
+    
     @Override
     public CharSequence getValue(CharSequence key) throws AvroRemoteException {
         logger.info("AvroRPCServer:getValue {}",key.toString());
