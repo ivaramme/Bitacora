@@ -11,7 +11,8 @@ import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.grayscaleconsulting.bitacora.rpc.AvroSocketRPCHandler;
 import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
 
-import org.apache.commons.collections.ListUtils;
+import com.grayscaleconsulting.bitacora.storage.LocalStorage;
+import com.grayscaleconsulting.bitacora.storage.LocalStorageRocksDBImpl;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 
@@ -73,10 +74,15 @@ public class Bitacora {
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);
         kafkaProducer.start();
 
+        LocalStorage localStorage = new LocalStorageRocksDBImpl("bitacora.db");
+        localStorage.start();
+        
         DataManagerExternal externalData = new DataManagerExternalImpl(clusterMembership);
+        
         DataManager dataManager = new DataManagerImpl();
         dataManager.setExternal(externalData);
         dataManager.setProducer(kafkaProducer);
+        dataManager.setLocalStorage(localStorage);
 
         // Prepare the list of Kafka servers from the global variable
         List<String> brokers = new ArrayList<>();
@@ -85,14 +91,14 @@ public class Bitacora {
             brokers.add(_kafkaServers[ind]);
         }
 
-        Consumer consumer = new KafkaSimpleConsumerImpl(nodeName, brokers, topic, 0, zookeeperHosts);//KafkaConsumerImpl(topic, nodeName, zookeeperHosts, 1);
+        Consumer consumer = new KafkaSimpleConsumerImpl(nodeName, brokers, topic, 0, zookeeperHosts);
         consumer.setDataManager(dataManager);
         consumer.start();
         
         // Start Socket RPC Server
         AvroSocketRPCHandler rpcServer = new AvroSocketRPCHandler(dataManager, avroPort);
-        
-        
+        rpcServer.start();
+
         // Start HTTP RPC server
         Server server = new Server();
         server.addHandler(new HttpRPCHandler(dataManager, consumer));
@@ -105,9 +111,6 @@ public class Bitacora {
         
         server.addConnector(connector0);
         
-        server.start();
-        server.join();
-
         Runtime.getRuntime().addShutdownHook(new Thread()
         {
             @Override
@@ -115,6 +118,15 @@ public class Bitacora {
             {
                 consumer.shutdown();
                 kafkaProducer.shutdown();
+                localStorage.shutdown();
+                rpcServer.shutdown();
+
+                try {
+                    clusterMembership.shutdown();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 try {
                     server.stop();
                 } catch (Exception e) {
@@ -122,6 +134,9 @@ public class Bitacora {
                 }
             }
         });
+
+        server.start();
+        server.join();
 
     }
 }
