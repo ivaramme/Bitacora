@@ -8,6 +8,8 @@ import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
 import com.grayscaleconsulting.bitacora.kafka.Consumer;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 import org.mortbay.jetty.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,8 @@ public class HttpRPCHandler extends AbstractHandler {
     private final Counter missedRequests = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-missedRequests-requests");
     private final Counter errors = Metrics.getDefault().newCounter(HttpRPCHandler.class, "rpc-http-error-requests");
 
+    private final Timer requestDuration = Metrics.getDefault().newTimer(HttpRPCHandler.class, "rpc-request-latency");
+    
     private Gson jsonParser;
     private DataManager dataManager;
     private Consumer consumer;
@@ -57,22 +61,23 @@ public class HttpRPCHandler extends AbstractHandler {
         if(endpoint.startsWith(RPC_ENDPOINT) || endpoint.startsWith(RPC_CLUSTER_ENDPOINT)) {
             logger.info("New request for endpoint: " + endpoint);
             requests.inc();
-            
+            final TimerContext context = requestDuration.time();
+
             try {
                 if(null == dataManager) {
                     logger.error("RPC service is not configured correctly");
                     sendErrorResponse(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                    context.stop();
                     return;
                 }
 
-                // Get a value from
                 if(req.getMethod().equalsIgnoreCase("GET")) {
-                    // TODO: change this from being a param to being part of the URI
                     String key = req.getParameter("key");
                     if (null == key || key.isEmpty() || key.trim().isEmpty()) {
                         logger.info("Missing request information");
                         sendErrorResponse(resp, HttpServletResponse.SC_BAD_REQUEST);
                         resp.flushBuffer();
+                        context.stop();
                         return;
                     }
 
@@ -117,11 +122,14 @@ public class HttpRPCHandler extends AbstractHandler {
                 ioe.printStackTrace();
                 errors.inc();
             }
+            
+            context.stop();
         }else {
             logger.info("Invalid endpoint: " + endpoint);
             sendErrorResponse(resp, HttpServletResponse.SC_NOT_IMPLEMENTED);
             errors.inc();
         }
+
         resp.flushBuffer();
     }
 

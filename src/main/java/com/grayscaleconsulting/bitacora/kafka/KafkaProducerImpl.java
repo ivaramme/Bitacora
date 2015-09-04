@@ -1,7 +1,10 @@
 package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.grayscaleconsulting.bitacora.util.Utils;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
@@ -14,6 +17,8 @@ import java.util.Properties;
  */
 public class KafkaProducerImpl implements Producer {
     private final static Logger logger = LoggerFactory.getLogger(KafkaProducerImpl.class);
+    
+    private Timer publishingLatency = Metrics.getDefault().newTimer(KafkaProducerImpl.class, "publishing-latency");
     
     private final String brokerList;
     private final String topic;
@@ -32,11 +37,13 @@ public class KafkaProducerImpl implements Producer {
     @Override
     public void publish(KeyValue value) {
         if(null != producer) {
-            
+
             byte[] data = Utils.convertToAvro(value);
             if(null != data) {
+                final TimerContext context = publishingLatency.time();
                 ProducerRecord<String, byte[]> message = new ProducerRecord<String, byte[]>(topic, value.getKey(), data);
                 producer.send(message);
+                context.stop();
             } else {
                 logger.error("Unable to send this message: {}", value);
             }
@@ -59,8 +66,10 @@ public class KafkaProducerImpl implements Producer {
             }
 
             if(null != payload) {
+                final TimerContext context = publishingLatency.time();
                 ProducerRecord<String, byte[]> message = new ProducerRecord<String, byte[]>(topic, key, payload);
                 producer.send(message);
+                context.stop();
             } else {
                 logger.error("Unable to send this message: {}", value);
             }
