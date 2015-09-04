@@ -31,7 +31,7 @@ public class Bitacora {
         //Address of the zookeeper host
         String zookeeperHosts = System.getenv("ZOOKEEPER_HOSTS");
         if (null == zookeeperHosts)
-            zookeeperHosts = "localhost:2181";
+            zookeeperHosts = "127.0.0.1:2181";
 
         // Name of this node
         String nodeName = System.getenv("NODENAME");
@@ -58,12 +58,12 @@ public class Bitacora {
         // Kafka server to publish messages to
         String brokerList = System.getenv("BROKER_LIST");
         if (null == brokerList)
-            brokerList = "localhost:9092";
+            brokerList = "127.0.0.1:9092";
 
         // Where to read and publish messages to
         String topic = System.getenv("KAFKA_TOPIC");
         if (null == topic)
-            topic = "test";
+            topic = "test4";
 
         Metrics.initJmxReporter();
 

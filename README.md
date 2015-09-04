@@ -59,14 +59,20 @@ Assuming you have a Zookeper and Kafka Cluster, try `mvn clean package` and exec
 
 You can specify the hostname for your zookeeper cluster as well for your Kafka servers and other settings by using `export <VARIABLE_NAME>=<VALUE>`
 
-`ZOOKEEPER_HOSTS` Zookeeper hosts in the format <host1>:<port1>,<host2>:<port2>". Defaults to localhost:2181 if empty.
+`ZOOKEEPER_HOSTS` Zookeeper hosts in the format <host1>:<port1>,<host2>:<port2>". Defaults to 127.0.0.1:2181 if empty.
 
-`BROKER_LIST` At least one Kafka Server to serve as contact to publish events Defaults to localhost:9092 if empty.
+`BROKER_LIST` At least one Kafka Server to serve as contact to publish events Defaults to 127.0.0.1:9092 if empty.
 
 `API_PORT` is used to specify the port to listen for HTTP calls to interact with the service.
 
 `NODENAME` is used in case you want to specify the name of the node or IP used by other nodes in the cluster to request data
 
+
+# Local Development:
+
+A Vagrant machine has been included that creates an instance of a Zookeeper server and a Kafka Server and that exposes ports 2181 and 9092 automatically.
+
+To execute it just `vagrant up` and then run *Bitacora* without any parameters as it will default to local servers.
 
 # Docker Support:
 
