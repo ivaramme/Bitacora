@@ -188,14 +188,24 @@ public class DataManagerImpl implements DataManager {
     }
 
     @Override
+    public boolean useLocal() {
+        if(null != storage && storage.isValid()) {
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
     public void setExternal(DataManagerExternal external) {
         this.dataManagerExternal = external;
     }
 
+    @Override
     public void setProducer(Producer producer) {
         this.producer = producer;
     }
     
+    @Override
     public void setLocalStorage(LocalStorage storage) {
         this.storage = storage;
     }

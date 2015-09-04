@@ -32,6 +32,7 @@ public class LocalStorageRocksDBImpl implements LocalStorage {
     private final Counter deleteCounter = Metrics.getDefault().newCounter(LocalStorageRocksDBImpl.class, "local-storage-deletes");
     
     private boolean ready = false;
+    private boolean valid = true;
     private RocksDB database;
     private Options options = new Options();
     private String path;
@@ -54,6 +55,10 @@ public class LocalStorageRocksDBImpl implements LocalStorage {
                 .setCompactionStyle(CompactionStyle.UNIVERSAL);
 
         try {
+            if(!new File(path).exists()) {
+                valid = false;
+            }
+            
             database = RocksDB.open(options, path);
             ready = true;
         } catch (RocksDBException e) {
@@ -118,5 +123,10 @@ public class LocalStorageRocksDBImpl implements LocalStorage {
     @Override
     public boolean isReady() {
         return ready;
+    }
+
+    @Override
+    public boolean isValid() {
+        return valid;
     }
 }

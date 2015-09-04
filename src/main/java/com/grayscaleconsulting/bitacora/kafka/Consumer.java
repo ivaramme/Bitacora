@@ -23,5 +23,10 @@ public interface Consumer {
      */
     void shutdown();
 
+    /**
+     * Removes the offset for this consumer from the source of truth
+     */
+    void resetOffset();
+    
     boolean isReady();
 }

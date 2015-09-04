@@ -49,4 +49,10 @@ public interface LocalStorage {
      * @return
      */
     boolean isReady();
+
+    /**
+     * Returns true if the local storage is valid for usage*
+     * @return
+     */
+    boolean isValid();
 }

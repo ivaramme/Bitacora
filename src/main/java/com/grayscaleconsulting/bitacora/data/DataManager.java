@@ -77,6 +77,12 @@ public interface DataManager {
      * @param key
      */
     void delete(String key);
+
+    /**
+     * Indicates if it uses a local database or not
+     * @return true if local storage is setup correctly
+     */
+    boolean useLocal();
     
     void setExternal(DataManagerExternal external);
     void setProducer(Producer producer);

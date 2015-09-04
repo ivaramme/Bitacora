@@ -102,7 +102,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
         
         leadBroker = metadata.leader().host()+":"+metadata.leader().port();
         clientName = groupId;
-        zkConsumerNodeName = ZK_PARENT_NODE + "/" + clientName;
+        zkConsumerNodeName = ZK_PARENT_NODE + "/" + clientName+":"+topic;
 
         try {
             initializeZookeeper(zookeperHosts);
@@ -112,6 +112,10 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
             throw new RuntimeException("Unable to start zookeeper");
         }
 
+        if(null != dataManager && !dataManager.useLocal()) {
+            resetOffset();
+        }
+        
         runner = new Thread(this);
         runner.start();
     }
@@ -531,5 +535,20 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
 
     public String getLeadBroker() {
         return leadBroker;
+    }
+    
+    @Override
+    public void resetOffset() {
+        try {
+            Stat offsetExists = zookeeper.exists(zkConsumerNodeName, false);
+            if(null != offsetExists) {
+                zookeeper.delete(zkConsumerNodeName, offsetExists.getVersion());
+                logger.info("Resetting offset as no local storage was found.");
+            }
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
