@@ -108,6 +108,7 @@ public class KafkaSimpleConsumerImplTest {
     public void testKafkaOneServerDownOnly() throws Exception {
         kafkaServer.shutdown();
 
+        TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 15000, Option.empty(), Option.apply(1));
         consumer.start();
         Thread.sleep(SLEEP_TIME);
         assertTrue(consumer.isReady());

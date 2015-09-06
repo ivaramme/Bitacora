@@ -1,0 +1,6 @@
+FROM ivaramme/bitacora-base:1
+
+COPY src/main/docker/aws/run.sh /opt/bitacora/run.sh
+RUN chmod +x /opt/bitacora/run.sh
+
+ENTRYPOINT ["/opt/bitacora/run.sh"]

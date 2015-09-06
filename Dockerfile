@@ -1,1 +1,1 @@
-FROM ivaramme/bitacora-base
+FROM ivaramme/bitacora-base:1

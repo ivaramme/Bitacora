@@ -34,12 +34,13 @@ public class Bitacora {
             zookeeperHosts = "127.0.0.1:2181";
 
         // Name of this node
-        String nodeName = System.getenv("NODENAME");
-        if (null == nodeName)
-            nodeName = InetAddress.getLocalHost().getHostName();
+        String nodeName = InetAddress.getLocalHost().getHostName();
+        String nodeAddress = System.getProperty("NODE_ADDRESS", System.getenv("NODE_ADDRESS"));
+        if (null == nodeAddress)
+            nodeAddress = InetAddress.getLocalHost().getHostAddress();
 
         // Port to serve http API calls
-        int apiPort = 8082;
+        int apiPort = 8080;
         if (null != System.getenv("API_PORT")) {
             try {
                 apiPort = Integer.valueOf(System.getenv("API_PORT"));
@@ -63,12 +64,12 @@ public class Bitacora {
         // Where to read and publish messages to
         String topic = System.getenv("KAFKA_TOPIC");
         if (null == topic)
-            topic = "test4";
+            topic = "test";
 
         Metrics.initJmxReporter();
 
         // Instantiate objects to execute service
-        ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeName, apiPort, avroPort);
+        ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeAddress, apiPort, avroPort);
         clusterMembership.initialize();
 
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);

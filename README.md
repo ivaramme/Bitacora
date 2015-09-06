@@ -65,7 +65,7 @@ You can specify the hostname for your zookeeper cluster as well for your Kafka s
 
 `API_PORT` is used to specify the port to listen for HTTP calls to interact with the service.
 
-`NODENAME` is used in case you want to specify the name of the node or IP used by other nodes in the cluster to request data
+`NODE_ADDRESS` is used in case you want to specify the public name or IP used by other nodes in the cluster to request data
 
 
 # Local Development:
@@ -83,7 +83,13 @@ After you run `mvn clean package`, build a new Docker image by executing `docker
 
 To run a docker container with the app embedded execute: `docker run -e "ZOOKEEPER_HOSTS=<YOUR_ZOOKEEPER_HOSTS>" -e "BROKER_LIST=<YOUR_KAFKA_SERVERS>" -d bitacora`. 
 
-The docker base image is included in the repo, located inside: `src/main/docker/Dockerfile`. More information about Docker [here|https://www.docker.com/toolbox].
+The docker base image is included in the repo, located inside: `src/main/docker/Dockerfile`. You can access both the base image and the service image from the Docker public registry: `https://hub.docker.com/r/ivaramme/bitacora-base/` and `https://hub.docker.com/r/ivaramme/bitacora/`.
+ 
+More information about Docker [here|https://www.docker.com/toolbox].
+
+### Docker AWS
+
+A Docker image that runs in AWS using ECS has been created as well under the name `ivaramme/bitacora-aws` in the public registry. The main difference is that the container needs to know the IP address of its host in order to support JMX and receive connections from other containers.
 
 # Web API (very limited right now):
 
