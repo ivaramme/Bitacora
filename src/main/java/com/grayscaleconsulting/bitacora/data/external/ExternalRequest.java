@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 /**
  * An instance of the class ExternalRequest represents an external request made to another node

@@ -109,6 +109,7 @@ public class KafkaSimpleConsumerImplTest {
         kafkaServer.shutdown();
 
         TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 15000, Option.empty(), Option.apply(1));
+        Thread.sleep(SLEEP_TIME);
         consumer.start();
         Thread.sleep(SLEEP_TIME);
         assertTrue(consumer.isReady());

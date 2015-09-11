@@ -1,6 +1,6 @@
 package com.grayscaleconsulting.bitacora.kafka;
 
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 /**
  * Broadcasts values set to the main datastore.

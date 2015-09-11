@@ -3,7 +3,7 @@ package com.grayscaleconsulting.bitacora.rpc;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.grayscaleconsulting.bitacora.data.DataManager;
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 import com.grayscaleconsulting.bitacora.kafka.Consumer;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
@@ -88,12 +88,15 @@ public class HttpRPCHandler extends AbstractHandler {
                     if (null == keyValue) {
                         logger.info(key + " was not found, returning null value");
                         missedRequests.inc();
-                        clusterRequests.inc();
                         sendErrorResponse(resp, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key " + key + " not found\"} ");
                     } else {
-                        publicRequests.inc(); // public requests will always forward
                         sendResponse(keyValue, resp, forwardRPCRequest);
                     }
+                    if(forwardRPCRequest)
+                        publicRequests.inc(); // public requests will always forward
+                    else
+                        clusterRequests.inc();
+                    
                 } else
                 // Set a new value
                 if(req.getMethod().equalsIgnoreCase("POST")) {
@@ -122,7 +125,7 @@ public class HttpRPCHandler extends AbstractHandler {
                 ioe.printStackTrace();
                 errors.inc();
             }
-            
+
             context.stop();
         }else {
             logger.info("Invalid endpoint: " + endpoint);

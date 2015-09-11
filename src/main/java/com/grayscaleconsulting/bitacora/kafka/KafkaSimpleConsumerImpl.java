@@ -1,7 +1,7 @@
 package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.DataManager;
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.grayscaleconsulting.bitacora.util.Utils;
 import com.yammer.metrics.core.Counter;
@@ -440,7 +440,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
             }
             if (goToSleep) {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(1000);
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }

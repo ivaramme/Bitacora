@@ -4,7 +4,7 @@ import com.grayscaleconsulting.bitacora.cluster.ClusterMembership;
 import com.grayscaleconsulting.bitacora.cluster.nodes.Node;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequestTask;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;

@@ -8,6 +8,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -19,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 /**
  * Represents a formal request to other nodes for an specific piece of data. 
@@ -34,8 +35,9 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
     private static PoolingHttpClientConnectionManager poolingCM = new PoolingHttpClientConnectionManager();
     private static HttpClient client = HttpClients.custom()
             .setConnectionManager(poolingCM)
-            .setMaxConnPerRoute(5)
-            .setMaxConnTotal(5).build();
+            .setMaxConnPerRoute(15)
+            .setMaxConnTotal(15).build();
+    private final RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10).build();
 
     private static ExecutorService executor = Executors.newFixedThreadPool(4);
     
@@ -66,7 +68,8 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
                 @Override
                 public HttpResponse call() throws Exception {
                     HttpGet request = new HttpGet("http://"+endpoint + HttpRPCHandler.RPC_CLUSTER_ENDPOINT+"?key=" + key);
-                    try {
+                    request.setConfig(requestConfig);
+                    try { 
                         return client.execute(request);
                     }
                     catch(IOException e) {

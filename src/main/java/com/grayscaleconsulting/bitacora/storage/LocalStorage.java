@@ -1,6 +1,6 @@
 package com.grayscaleconsulting.bitacora.storage;
 
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 /**
  * Represents an instance that handles the storage of data locally in whatever format/technology the user wants to use.

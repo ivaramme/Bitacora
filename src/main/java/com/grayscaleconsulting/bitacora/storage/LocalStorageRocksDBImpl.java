@@ -1,6 +1,6 @@
 package com.grayscaleconsulting.bitacora.storage;
 
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.yammer.metrics.core.Counter;

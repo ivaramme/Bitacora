@@ -1,4 +1,4 @@
-package com.grayscaleconsulting.bitacora.data.metadata;
+package com.grayscaleconsulting.bitacora.model;
 
 import java.io.Serializable;
 import java.util.UUID;

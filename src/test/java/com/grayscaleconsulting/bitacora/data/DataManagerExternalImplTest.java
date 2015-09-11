@@ -4,7 +4,7 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.grayscaleconsulting.bitacora.cluster.ClusterMembership;
 import com.grayscaleconsulting.bitacora.cluster.ClusterMembershipImpl;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import kafka.utils.TestUtils;
 import kafka.utils.TestZKUtils;
 import kafka.zk.EmbeddedZookeeper;
@@ -129,7 +129,7 @@ public class DataManagerExternalImplTest {
     public void testNoMembersInCluster() throws Exception {
         assertNull(externalHandler.initiateExternalRequest("a_key"));
     }
-
+    
     // Create 3 different nodes that return the same data
     @Test
     public void testSameResponseFromMembers() throws Exception {
@@ -166,13 +166,13 @@ public class DataManagerExternalImplTest {
         assertEquals("a_value", value.getValue());
         assertEquals("uuid", value.getUuid());
         
-        membership1.shutdown();
-        membership2.shutdown();
-        membership3.shutdown();
-        
         service1.stop();
         service2.stop();
         service3.stop();
+
+        membership1.shutdown();
+        membership2.shutdown();
+        membership3.shutdown();
     }
 
     // Create 3 different nodes, only 1 returns valid data, tests that the quorum parameter is respected

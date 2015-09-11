@@ -1,6 +1,6 @@
 package com.grayscaleconsulting.bitacora.util;
 
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.rpc.avro.KeyValueRawAvro;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.Encoder;

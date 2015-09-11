@@ -3,7 +3,7 @@ package com.grayscaleconsulting.bitacora.data;
 import com.grayscaleconsulting.bitacora.storage.LocalStorage;
 import com.grayscaleconsulting.bitacora.kafka.Producer;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
-import com.grayscaleconsulting.bitacora.data.metadata.KeyValue;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import org.slf4j.Logger;
