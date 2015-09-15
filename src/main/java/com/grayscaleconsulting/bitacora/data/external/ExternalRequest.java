@@ -33,6 +33,7 @@ public class ExternalRequest {
     private int totalRequests = 0;
     private int successfulRequests = 0;
     private int failedRequests = 0;
+    private int abortedRequests = 0;
     
     private Map<String, String> endpointResponse;
 
@@ -94,6 +95,14 @@ public class ExternalRequest {
 
     public int getTotalRequests() {
         return totalRequests;
+    }
+    
+    public int getAbortedRequests() {
+        return abortedRequests;
+    }
+    
+    public void setAbortedRequests(int abortedRequests) {
+        this.abortedRequests = abortedRequests;
     }
 
     public String getKey() {

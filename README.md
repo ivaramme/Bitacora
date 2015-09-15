@@ -67,6 +67,9 @@ You can specify the hostname for your zookeeper cluster as well for your Kafka s
 
 `NODE_ADDRESS` is used in case you want to specify the public name or IP used by other nodes in the cluster to request data
 
+# Java properties:
+
+`external.request.timeout` Sets the connection timeout for any HTTP External requests between nodes.. Defaults to 60 ms.
 
 # Local Development:
 

@@ -13,6 +13,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.Random;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.Assert.*;
 
@@ -35,8 +37,10 @@ public class DataManagerExternalImplTest {
         // Support multiple nodes
         zkServer = new EmbeddedZookeeper(TestZKUtils.zookeeperConnect());
         int portApi = TestUtils.choosePort();
-        membership = new ClusterMembershipImpl(zkServer.connectString(), "127.0.0.1", portApi);
+        membership = new ClusterMembershipImpl(zkServer.connectString(), "127.0.0.1:800", portApi);
         membership.initialize();
+
+        System.setProperty("external.request.timeout", "160");
         
         externalHandler = new DataManagerExternalImpl(membership);
         externalHandler.setQuorum(0.5);
@@ -129,7 +133,58 @@ public class DataManagerExternalImplTest {
     public void testNoMembersInCluster() throws Exception {
         assertNull(externalHandler.initiateExternalRequest("a_key"));
     }
-    
+
+    @Test(timeout = 20000)
+    public void testServersUnresponsiveTimesOut() throws Exception {
+        ClusterMembershipImpl membership1 = new ClusterMembershipImpl(zkServer.connectString(), "localhost", service1.port());
+        membership1.initialize();
+
+        ClusterMembershipImpl membership2 = new ClusterMembershipImpl(zkServer.connectString(), "localhost", service2.port());
+        membership2.initialize();
+
+        ClusterMembershipImpl membership3 = new ClusterMembershipImpl(zkServer.connectString(), "localhost", service3.port());
+        membership3.initialize();
+
+        Thread.sleep(1000);
+        
+        String response = "{\"key\":\"a_key\",\"value\":\"a_value\",\"timestamp\":1440127917442,\"source\":1,\"ttl\":0,\"uuid\":\"uuid\"}";
+        service1.stubFor(get(urlEqualTo("/rpc/cluster?key=a_key")).
+                willReturn(aResponse().withFixedDelay(4000).withStatus(200).withBody(response)));
+        service2.stubFor(get(urlEqualTo("/rpc/cluster?key=a_key")).
+                willReturn(aResponse().withFixedDelay(10).withStatus(200).withBody(response)));
+        service3.stubFor(get(urlEqualTo("/rpc/cluster?key=a_key")).
+                willReturn(aResponse().withFixedDelay(4000).withStatus(404).withBody("{}")));
+
+        service1.start();
+        service2.start();
+        service3.start();
+
+        ExternalRequest request = externalHandler.initiateExternalRequest("a_key");
+        assertNull(request.getKeyValue());
+        assertEquals(0, request.getSuccessfulRequests()); // even though there's one valid response, the quorum value will invalidate it
+        assertEquals(2, request.getAbortedRequests());
+
+        // Reset response time for server1 to force to valid response times
+        service1.stop();
+        service1.resetMappings();
+        service1.stubFor(get(urlEqualTo("/rpc/cluster?key=a_key")).
+                willReturn(aResponse().withFixedDelay(40).withStatus(200).withBody(response)));
+        service1.start();
+
+        request = externalHandler.initiateExternalRequest("a_key");
+        assertNotNull(request.getKeyValue());
+        assertEquals(2, request.getSuccessfulRequests());
+        assertEquals(1, request.getAbortedRequests());
+
+        service1.stop();
+        service2.stop();
+        service3.stop();
+
+        membership1.shutdown();
+        membership2.shutdown();
+        membership3.shutdown();
+    }
+
     // Create 3 different nodes that return the same data
     @Test
     public void testSameResponseFromMembers() throws Exception {
@@ -217,10 +272,9 @@ public class DataManagerExternalImplTest {
                 willReturn(aResponse().withStatus(200).withBody(response)));
         service2.start();
 
-        Thread.sleep(SLEEP_TIME);
+        //Thread.sleep(SLEEP_TIME);
         
         request = externalHandler.initiateExternalRequest("a_key");
-        Thread.sleep(SLEEP_TIME);
 
         assertEquals(2, request.getSuccessfulRequests());
         assertEquals(1, request.getFailedRequests());

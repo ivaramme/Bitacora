@@ -3,13 +3,15 @@ package com.grayscaleconsulting.bitacora.data.external;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
@@ -19,8 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-
-import com.grayscaleconsulting.bitacora.model.KeyValue;
 
 /**
  * Represents a formal request to other nodes for an specific piece of data. 
@@ -32,19 +32,18 @@ import com.grayscaleconsulting.bitacora.model.KeyValue;
 public class ExternalRequestTask implements Callable<ExternalRequest> {
     private static Logger logger = LoggerFactory.getLogger(ExternalRequestTask.class);
     
-    private static PoolingHttpClientConnectionManager poolingCM = new PoolingHttpClientConnectionManager();
-    private static HttpClient client = HttpClients.custom()
-            .setConnectionManager(poolingCM)
-            .setMaxConnPerRoute(15)
-            .setMaxConnTotal(15).build();
-    private final RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10).build();
+    private static PoolingHttpClientConnectionManager poolingCM;
+    private static CloseableHttpClient client;
+    private final RequestConfig requestConfig;
 
-    private static ExecutorService executor = Executors.newFixedThreadPool(4);
-    
+    private static ExecutorService executor = Executors.newFixedThreadPool(3);
+    private static ScheduledExecutorService cancellableExecutor = Executors.newScheduledThreadPool(1);
+
     private List<String> endpoints;
     private String key;
     private double quorum;
-    private List<Future<HttpResponse>> pendingRequests;
+    private List<Future<CloseableHttpResponse>> pendingRequests;
+    private int timeout;
     
     private ExternalRequest request;
     
@@ -55,6 +54,26 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
         this.key = key;
         this.quorum = quorum;
         this.request = new ExternalRequest(key, endpoints.size());
+        this.timeout = 60;
+        try {
+            timeout = Integer.parseInt(System.getProperty("external.request.timeout", "60"));
+        } catch (NumberFormatException nfe) { }
+
+        poolingCM = new PoolingHttpClientConnectionManager();
+        poolingCM.setValidateAfterInactivity(1000);
+
+        requestConfig = RequestConfig.custom()
+                .setSocketTimeout(timeout)
+                .setConnectTimeout(timeout / 3)
+                .setConnectionRequestTimeout(timeout * 2)
+                .build();
+        
+        client = HttpClients.custom()
+                .setConnectionManager(poolingCM)
+                .setMaxConnPerRoute(10)
+                .setDefaultRequestConfig(requestConfig)
+                .setMaxConnTotal(20)
+                .build();
     }
 
     public ExternalRequest call() {
@@ -62,17 +81,19 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
         Preconditions.checkArgument(requestsMade > 0);
 
         // Define requests
-        List<Callable<HttpResponse>> requests = new ArrayList<>();
+        List<Callable<CloseableHttpResponse>> requests = new ArrayList<>();
         for(String endpoint : endpoints) {
-            requests.add(new Callable<HttpResponse>() {
+            requests.add(new Callable<CloseableHttpResponse>() {
+                private HttpGet request;
+
                 @Override
-                public HttpResponse call() throws Exception {
-                    HttpGet request = new HttpGet("http://"+endpoint + HttpRPCHandler.RPC_CLUSTER_ENDPOINT+"?key=" + key);
-                    request.setConfig(requestConfig);
-                    try { 
+                public CloseableHttpResponse call() throws Exception {
+                    request = new HttpGet("http://" + endpoint + HttpRPCHandler.RPC_CLUSTER_ENDPOINT + "?key=" + key);
+                    long start = System.currentTimeMillis();
+                    try {
                         return client.execute(request);
-                    }
-                    catch(IOException e) {
+                    } catch (IOException e) {
+                        logger.error("Timed out an external request to endpoint {} with duration {}", endpoint, ( System.currentTimeMillis() - start ));
                         e.printStackTrace();
                     }
                     return null;
@@ -80,27 +101,31 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
             });
         }
 
-        // Send them to completion service
+        // Send requests to a completion service executor
         pendingRequests = new ArrayList<>();
-        CompletionService<HttpResponse> completionService = new ExecutorCompletionService<HttpResponse>(executor);
-        for(Callable<HttpResponse> req : requests) {
+        CompletionService<CloseableHttpResponse> completionService = new ExecutorCompletionService<CloseableHttpResponse>(executor);
+        for(Callable<CloseableHttpResponse> req : requests) {
             pendingRequests.add(completionService.submit(req));
         }
 
         // Process responses
         int requestsCompleted = 0;
         int successRequests = 0;
+        int abortedRequests = 0;
         List<KeyValue> results = new ArrayList<>();
         
         // Wait for all requests or until we have enough quorum of success responses
         while(requestsCompleted < requestsMade) {
             HttpResponse response = null;
             try {
-                response = completionService.take().get();
+                Future<CloseableHttpResponse> resp = completionService.take();
+                if(null != resp) {
+                    response = resp.get();
+                }
             } catch (InterruptedException|ExecutionException e) {
                 logger.error("Error waiting for responses to external nodes, possibly tasks have been cancelled.");
                 e.printStackTrace();
-                break;
+                //break;
             } 
             
             requestsCompleted++;
@@ -116,8 +141,9 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
                         e.printStackTrace();
                     }
                 }
+            } else {
+                abortedRequests++;
             }
-
         }
         
         if(requestsCompleted > 0 && !(((double)((double)successRequests/(double)requestsCompleted)) > quorum)) {
@@ -126,6 +152,7 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
         
         request.setFailedRequests(requestsMade-successRequests);
         request.setSuccessfulRequests(successRequests);
+        request.setAbortedRequests(abortedRequests);
         
         if(0 < successRequests) {
             // Sort responses by timestamp or return an empty key if empty
@@ -145,7 +172,7 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
     }
     
     public void cancel() {
-        if(pendingRequests != null) {
+        if(null != pendingRequests) {
             pendingRequests.forEach(future -> future.cancel(true) );
         }
     }
