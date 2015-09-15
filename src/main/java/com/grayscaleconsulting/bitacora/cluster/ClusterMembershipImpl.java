@@ -70,6 +70,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
                                 initialize();
                             } else if(event.getState().equals(Event.KeeperState.SyncConnected)) {
                                 try {
+                                    initialized = true;
                                     createParentZNode(Utils.BASE_NODE_NAME, new byte[0]);
                                     createParentZNode(Utils.AVAILABLE_SERVERS, new byte[0]);
                                     createParentZNode(Utils.SOCKET_AVAILABLE_SERVERS, new byte[0]);
@@ -80,7 +81,6 @@ public class ClusterMembershipImpl implements ClusterMembership {
                             }
                         }
                     });
-            initialized = true;
         } catch (IOException e) {
             logger.error("Unable to connect to Zookeeper. Signing off: " + e);
             e.printStackTrace();
@@ -130,7 +130,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
 
     @Override
     public List<Node> getAvailableNodes() throws IllegalStateException{
-        checkState(registered, "Cluster is not registered, can't return list");
+        checkState(registered, "Node is not registered, can't return list");
         return nodesAvailable;
     }
 
@@ -283,6 +283,7 @@ public class ClusterMembershipImpl implements ClusterMembership {
         checkNotNull(zooKeeper, "Zookeeper has not been instantiated");
 
         initialized = false;
+        registered = false;
         zooKeeper.close();
     }
 }
