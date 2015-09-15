@@ -1,2 +1,3 @@
 #!/bin/sh
+# Retrieves Hostname from metadata to expose the JMX connection
 java -Dcom.sun.management.jmxremote -Djava.rmi.server.hostname=$(/usr/bin/curl -s --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-ipv4) -Dcom.sun.management.jmxremote.port=8082 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.rmi.port=8082 -Dcom.sun.management.jmxremote.ssl=false -DNODE_ADDRESS=$(/usr/bin/curl -s --connect-timeout 2 http://169.254.169.254/latest/meta-data/local-ipv4) -jar app.jar
