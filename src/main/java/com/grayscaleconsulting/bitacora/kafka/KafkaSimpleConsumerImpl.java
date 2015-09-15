@@ -397,6 +397,12 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
             } catch (Exception e) {
                 logger.error("Error communicating with Broker [" + seed + "] to find Leader for [" + topic
                         + ", " + partition + "] Reason: " + e);
+                // Wait a bit and retry if there's another server available
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
             } finally {
                 if (consumer != null) consumer.close();
             }

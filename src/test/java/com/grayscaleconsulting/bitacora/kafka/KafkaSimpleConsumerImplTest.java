@@ -109,10 +109,8 @@ public class KafkaSimpleConsumerImplTest {
         kafkaServer.shutdown();
 
         TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 15000, Option.empty(), Option.apply(1));
-        Thread.sleep(SLEEP_TIME);
-        Thread.sleep(SLEEP_TIME);
         consumer.start();
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(SLEEP_TIME*3);
         assertTrue(consumer.isReady());
     }
 
@@ -207,6 +205,7 @@ public class KafkaSimpleConsumerImplTest {
         
         kafkaServer.startup();
 
+        TestUtils.waitUntilMetadataIsPropagated(servers, test_topic, 0, 2000);
         Thread.sleep(SLEEP_TIME);
         dataManager.set("key2", "value");
         Thread.sleep(SLEEP_TIME);
