@@ -195,22 +195,20 @@ public class KafkaSimpleConsumerImplTest {
         Thread.sleep(SLEEP_TIME);
         assertNotNull(dataManager.get("key")); // consumer is working fine
 
-        // shutdown first kafka server
+        // shutdown both kafka servers
         kafkaServer.shutdown();
         kafkaServer2.shutdown();
         kafkaServer.awaitShutdown();
-        kafkaServer2.shutdown();
-        
-        TestUtils.waitUntilLeaderIsElectedOrChanged(zkClient, test_topic, 0, 15000, Option.empty(), Option.apply(1));
-        
+        kafkaServer2.awaitShutdown();
+
+        // restart one kafka server
         kafkaServer.startup();
 
         TestUtils.waitUntilMetadataIsPropagated(servers, test_topic, 0, 2000);
         Thread.sleep(SLEEP_TIME);
         dataManager.set("key2", "value");
-        Thread.sleep(SLEEP_TIME);
-        Thread.sleep(SLEEP_TIME);
-        assertNotNull(dataManager.get("key2")); // consumer is still working
+        Thread.sleep(SLEEP_TIME*4);
+        assertNotNull(dataManager.get("key2")); // consumer should have set this value
     }
     
     

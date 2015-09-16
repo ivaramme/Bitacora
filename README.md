@@ -12,15 +12,20 @@ For a better performance, your Kafka cluster must have Key-based compaction enab
 
 # Architecture:
 
-Bitacora is an eventually consistent, multi-master, key value database that uses Kafka as its WAL (Write Ahead Log). Kafka is the source of truth of the data. 
+Bitacora is an eventually consistent, multi-master, key value database that uses Kafka as its WAL (Write Ahead Log). Kafka is the source of truth of the data but local nodes use local storage as well.
 
- Bitacora's nodes expose an interface to access the data that is kept in memory for fast access and that is also persisted in disk for cases where a restart to the node is needed or there's an incident with the server to avoid going through the whole log to recreate the data (which could be expensive if there's a lot of data/operations)   
- 
- On top of that Bitacora allows communication between peers to fetch data that is not currently present in a node if it is behind in the log consumption for whatever reason. The delayed node will return the value to the client with the highest write timestamp from the responses received from the peers. A concept of cluster membership is applied to accomplish this.
+On top of that Bitacora allows communication between peers to fetch data that is not currently present in a node if it is behind in the log consumption for whatever reason. The delayed node will return the value to the client with the highest write timestamp from the responses received from the peers. A concept of cluster membership is applied to accomplish this.
 
-**Diagram:**
+**Overall Diagram:**
 
 ![alt tag] (docs/diagram.png)
+
+### Nodes
+Bitacora's nodes expose different interfaces to access the data that is kept in memory for fast access - perhaps in a TOO simple structure. The main flavors to access this data is via an HTTP request or using an AVRO client (provided as well).
+
+All data that is also persisted in disk for cases where a restart to the node is needed or there's an incident with the server to avoid going through the whole log to recreate the data (which could be expensive if there's a lot of data/operations)   
+ 
+![alt tag] (docs/node-description.png)
 
 ### Considerations:
 #### Starting up:
