@@ -4,6 +4,7 @@ import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.kafka.*;
 
+import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.*;
@@ -11,9 +12,6 @@ import kafka.utils.*;
 import kafka.zk.EmbeddedZookeeper;
 import org.I0Itec.zkclient.ZkClient;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
 
@@ -21,6 +19,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -35,12 +37,16 @@ public class DataManagerImplTest {
     private KafkaServer kafkaServer;
     private Buffer<KafkaServer> servers;
     private String test_topic = "test_topic";
-    
+    private UIDGenerator generator;
+
     @Before
     public void setup() throws Exception {
         zkServer = new EmbeddedZookeeper(TestZKUtils.zookeeperConnect());
         zkClient = new ZkClient(zkServer.connectString(), 30000, 30000, ZKStringSerializer$.MODULE$);
 
+        generator = UIDGenerator.getInstance();
+        generator.setNodeName("nodeName");
+        
         int kafkaPort = TestUtils.choosePort();
         Properties props = TestUtils.createBrokerConfig(0, kafkaPort, false);
 
@@ -63,7 +69,6 @@ public class DataManagerImplTest {
 
         List<String> brokers = new ArrayList<>();
         brokers.add("localhost:"+kafkaPort);
-        //KafkaConsumerImpl(test_topic, consumer_name, zkServer.connectString(), 1);
         consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, test_topic, 0, zkServer.connectString());
         consumer.setDataManager(dataManager);
         consumer.start();
