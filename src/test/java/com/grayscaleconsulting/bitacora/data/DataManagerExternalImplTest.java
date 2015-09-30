@@ -5,9 +5,12 @@ import com.grayscaleconsulting.bitacora.cluster.ClusterMembership;
 import com.grayscaleconsulting.bitacora.cluster.ClusterMembershipImpl;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import com.grayscaleconsulting.bitacora.model.KeyValue;
+import com.grayscaleconsulting.bitacora.util.UIDGenerator;
+
 import kafka.utils.TestUtils;
 import kafka.utils.TestZKUtils;
 import kafka.zk.EmbeddedZookeeper;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -24,6 +27,7 @@ public class DataManagerExternalImplTest {
     private EmbeddedZookeeper zkServer;
     private ClusterMembership membership;
     private DataManagerExternal externalHandler;
+    private UIDGenerator generator;
 
     @Rule
     public WireMockRule service1 = new WireMockRule(TestUtils.choosePort());
@@ -39,6 +43,9 @@ public class DataManagerExternalImplTest {
         int portApi = TestUtils.choosePort();
         membership = new ClusterMembershipImpl(zkServer.connectString(), "127.0.0.1:800", portApi);
         membership.initialize();
+
+        generator = UIDGenerator.getInstance();
+        generator.setNodeName(membership.registrationName());
 
         System.setProperty("external.request.timeout", "160");
         

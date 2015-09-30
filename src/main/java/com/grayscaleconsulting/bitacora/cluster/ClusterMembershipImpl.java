@@ -143,6 +143,11 @@ public class ClusterMembershipImpl implements ClusterMembership {
         return registered; 
     }
 
+    @Override
+    public String registrationName() {
+        return registrationName;
+    }
+    
     /**
      * Generic wrapper when watching at the node's children.
      *

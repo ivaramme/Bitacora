@@ -41,4 +41,5 @@ public interface ClusterMembership {
     
     boolean isInitialized();
     boolean isRegistered();
+    String registrationName();
 }

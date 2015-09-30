@@ -2,12 +2,15 @@ package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
+import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.*;
 import kafka.zk.EmbeddedZookeeper;
+
 import org.I0Itec.zkclient.ZkClient;
+
 import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
@@ -40,6 +43,7 @@ public class KafkaSimpleConsumerImplTest {
     private List<String> brokers;
     private List<KafkaServer> kafkaServers;
     private KafkaConfig config;
+    private UIDGenerator generator;
 
     @Before
     public void setup() throws Exception {
@@ -78,6 +82,9 @@ public class KafkaSimpleConsumerImplTest {
         
         consumer = new KafkaSimpleConsumerImpl("localhost-node", brokers, test_topic, 0, zkServer.connectString());
         consumer.setDataManager(dataManager);
+
+        generator = UIDGenerator.getInstance();
+        generator.setNodeName("randomNode");
         
         Thread.sleep(SLEEP_TIME);
     }

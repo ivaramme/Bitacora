@@ -13,6 +13,7 @@ import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
 
 import com.grayscaleconsulting.bitacora.storage.LocalStorage;
 import com.grayscaleconsulting.bitacora.storage.LocalStorageRocksDBImpl;
+import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 
@@ -71,6 +72,9 @@ public class Bitacora {
         // Instantiate objects to execute service
         ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeAddress, apiPort, avroPort);
         clusterMembership.initialize();
+
+        UIDGenerator generator = UIDGenerator.getInstance();
+        generator.setNodeName(clusterMembership.registrationName());
 
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);
         kafkaProducer.start();

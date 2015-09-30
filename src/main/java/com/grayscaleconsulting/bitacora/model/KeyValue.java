@@ -1,5 +1,7 @@
 package com.grayscaleconsulting.bitacora.model;
 
+import com.grayscaleconsulting.bitacora.util.UIDGenerator;
+
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -28,7 +30,7 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
     transient private KeyValueStats stats;
 
     private KeyValue(String key, String value, long timestamp, int source, long ttl) {
-        this(key, value, timestamp, source, ttl, UUID.randomUUID().toString());
+        this(key, value, timestamp, source, ttl, String.valueOf(UIDGenerator.getInstance().getUID()));
     }
 
     private KeyValue(String key, String value, long timestamp, int source, long ttl, String uuid) {

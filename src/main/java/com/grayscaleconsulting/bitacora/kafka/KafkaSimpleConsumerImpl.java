@@ -217,7 +217,7 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
                 if (numErrors > MAX_ERRORS) {
                     throw new RuntimeException("Can't get in touch with a Kafka broker, don't know what else to do.");
                 }
-                
+
                 if (code == ErrorMapping.OffsetOutOfRangeCode()) {
                     // Reload offset
                     readOffset = getConsumerOffset();
