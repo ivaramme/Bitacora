@@ -54,21 +54,31 @@ public interface DataManager {
 
     /**
      * Sets a value to in-local hashmap from an external request.
+     * 
+     * <p>Checks if the value has not been set before putting it into cache as data from
+     * log will ALWAYS take precedence.</p>
+     *  
      * @param value
      */
-    void setFromCluster(KeyValue value);
+    KeyValue setFromCluster(KeyValue value);
+
+    /**
+     * Sets a value to in-local hashmap from the source of truth.
+     * 
+     * <p>Always overrides whatever value might exist in cache.</p>
+     *  
+     * @param value
+     */
+    KeyValue setFromLog(KeyValue value); // responds messages sent via kafka
 
     /**
      * Sets a value to in-local hashmap from the source of truth
+     *
+     * <p>Always overrides whatever value might exist in cache.</p>
+     *
      * @param value
      */
-    void setFromLog(KeyValue value); // responds messages sent via kafka
-
-    /**
-     * Sets a value to in-local hashmap from the source of truth
-     * @param value
-     */
-    void setFromLog(String key, KeyValue value); // responds messages sent via kafka
+    KeyValue setFromLog(String key, KeyValue value); // responds messages sent via kafka
 
     /**
      * Marks a key as available for deletion and sends it down the log.

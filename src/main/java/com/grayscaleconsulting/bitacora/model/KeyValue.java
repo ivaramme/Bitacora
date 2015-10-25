@@ -112,29 +112,13 @@ public class KeyValue implements Serializable, Comparable<KeyValue> {
     public String serialize() {
         return getKey() + SEPARATOR + getValue() + SEPARATOR + System.currentTimeMillis() + SEPARATOR + getUuid() + SEPARATOR + getTtl();
     }
-
-    /**
-     * Checks whether a String has the right format or not to be parsed as a KeyValue object
-     * @param message
-     * @return
-     */
-    public static boolean isValidKeyValue(String message) {
-        if(null == message || 
-                message.isEmpty() ||
-                message.indexOf(SEPARATOR) == -1 ||
-                message.length() <= 2 ||
-                message.charAt(message.length()-1) == SEPARATOR ||
-                message.split("\\"+String.valueOf(SEPARATOR)).length != 5 ) {
-            return false;
+    
+    public KeyValueStats getStats() {
+        if(null == stats) {
+            stats = new KeyValueStats();
         }
         
-        try {
-            Integer.valueOf(message.substring(message.lastIndexOf(SEPARATOR)+1));
-        } catch (NumberFormatException nfe) {
-            return false; // invalid timestamp
-        }
-        
-        return true;
+        return stats;
     }
 
     public void expire() {

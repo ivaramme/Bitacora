@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Properties;
 
 /**
  * Created by ivaramme on 8/27/15.
@@ -23,6 +24,8 @@ public class Utils {
     public static final String AVAILABLE_SERVERS = BASE_NODE_NAME+"/servers";
     public static final String SOCKET_AVAILABLE_SERVERS = BASE_NODE_NAME+"/sockets";
     public static final String SOCKET_CONNECTION_COUNT = Utils.SOCKET_AVAILABLE_SERVERS + "/connections";
+    
+    public static Properties mainProperties;
 
     public static byte[] convertToAvro(KeyValue keyValue) {
         KeyValueRawAvro rawData = new KeyValueRawAvro();
@@ -62,5 +65,22 @@ public class Utils {
         
         return null;
     }
+
+    public static Properties loadProperties() {
+        if(null != mainProperties) {
+            return mainProperties;
+        }
+        
+        Properties prop = new Properties();
+        try {
+            prop.load(Utils.class.getClassLoader().getResourceAsStream("bitacora.properties"));
+            logger.info("Bitacora properties file loaded successfully.");
+        }
+        catch (IOException ex) {
+            logger.error("Unable to load properties file: {}", ex);
+        }
+        return prop;
+    }
+
 
 }

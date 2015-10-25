@@ -1,16 +1,20 @@
 package com.grayscaleconsulting.bitacora.data;
 
-import com.grayscaleconsulting.bitacora.storage.LocalStorage;
-import com.grayscaleconsulting.bitacora.kafka.Producer;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
-import com.grayscaleconsulting.bitacora.model.KeyValue;
+import com.grayscaleconsulting.bitacora.kafka.Producer;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
+import com.grayscaleconsulting.bitacora.storage.LocalStorage;
+import com.grayscaleconsulting.bitacora.util.Utils;
 import com.yammer.metrics.core.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Exposes and API to interact with the main memory structure.
@@ -32,17 +36,28 @@ public class DataManagerImpl implements DataManager {
 
     private DataManagerExternal dataManagerExternal;
     private Producer producer;
-    private Map<String, KeyValue> data;
+    private Cache<String, KeyValue> data;
     private LocalStorage storage;
 
     public DataManagerImpl() {
-        this.data = new ConcurrentHashMap<>();
+        Properties props = Utils.loadProperties();
+        long maxSize = 5000L;
+        
+        try {
+            maxSize = Long.parseLong(props.getProperty("cache.items.max"));
+        } catch (NumberFormatException nfe) {}
+        
+        this.data = CacheBuilder.
+                newBuilder().
+                maximumSize(maxSize).
+                recordStats().
+                build();
     }
 
     @Override
     public boolean contains(String key) {
-        if(!data.containsKey(key)) {
-            if(null != storage) {
+        if(null == data.getIfPresent(key)) {
+            if(null != storage) { // check present in local persisted cache
                 try {
                     if(null != storage.get(key)) {
                         return true;
@@ -64,7 +79,7 @@ public class DataManagerImpl implements DataManager {
     public KeyValue getRaw(String key, boolean forwardIfMissing) {
         getRawRequests.inc();
         
-        KeyValue keyValue = data.get(key);
+        KeyValue keyValue = data.getIfPresent(key);
         if(null == keyValue) {
             if(null != storage && storage.isReady()) {
                 try {
@@ -107,8 +122,10 @@ public class DataManagerImpl implements DataManager {
         
         KeyValue keyValue = getRaw(key, forwardIfMissing);
         if(keyValue != null) {
+            keyValue.getStats().incRequests();
             return keyValue.getValue();
         }
+        
         getValueMissingRequests.inc();
         return null;
     }
@@ -118,31 +135,44 @@ public class DataManagerImpl implements DataManager {
         KeyValue keyValue = KeyValue.createNewKeyValue(key, value, System.currentTimeMillis(), KeyValue.TTL_FOREVER);
         if(null != producer) {
             producer.publish(keyValue);
+        } else {
+            data.put(key, keyValue);
         }
     }
 
     @Override
-    public void setFromCluster(KeyValue value) {
+    public KeyValue setFromCluster(KeyValue value) {
         logger.info("Attempting to set key: " + value.getKey() + " from another node in the cluster");
         
         if(value.getTtl() != KeyValue.TTL_EXPIRED && isValidKeyValue(value)) {
             value.setSource(KeyValue.SOURCE_CLUSTER);
-            if(null == data.putIfAbsent(value.getKey(), value)) { // use this in case of race condition
-                setValueFromCluster.inc();
+            try {
+                data.get(value.getKey(), new Callable<KeyValue>() {
+                    @Override
+                    public KeyValue call() {
+                        setValueFromCluster.inc();
+                        return value;
+                    }
+                });
+                return value;
+            } catch (ExecutionException e) {
+                logger.error("Unable to add to local cache from cluster due to error with local cache: {}", e);
             }
         } 
+        
+        return null;
     }
 
     @Override
-    public void setFromLog(KeyValue value) {
-        setFromLog(value.getKey(), value);
+    public KeyValue setFromLog(KeyValue value) {
+        return setFromLog(value.getKey(), value);
     }
     
     @Override
-    public void setFromLog(String key, KeyValue value) {
-        setValueFromLog.inc();
-
+    public KeyValue setFromLog(String key, KeyValue value) {
         if(null != value) {
+            setValueFromLog.inc();
+            
             if(null != dataManagerExternal) {
                 dataManagerExternal.invalidateExternalRequest(key); // invalidate any pending RPC call for this key
             }
@@ -161,6 +191,8 @@ public class DataManagerImpl implements DataManager {
         } else {
             internalDeleteKey(key);
         }
+        
+        return value;
     }
     
 
@@ -173,7 +205,7 @@ public class DataManagerImpl implements DataManager {
             }
         }
             
-        data.remove(key);
+        data.invalidate(key);
     }
 
     @Override
@@ -218,4 +250,5 @@ public class DataManagerImpl implements DataManager {
         expiredKeyValue.inc();
         return false;
     }
+
 }

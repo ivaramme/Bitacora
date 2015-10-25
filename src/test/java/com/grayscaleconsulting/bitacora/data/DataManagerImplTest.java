@@ -161,6 +161,23 @@ public class DataManagerImplTest {
         assertNull(dataManager.get("another_key", true));
     }
     
+    @Test
+    public void testItemsAreInvalidatedInCacheAfterCapacityExceeded()  {
+        // Test just local cache
+        dataManager.setProducer(null);
+        
+        int maxCapacity = 5000;
+        for(int ind = 0; ind < 5000 + 10; ind++) {
+            dataManager.set("key"+ind, ""+ind);
+        }
+
+        assertNotNull(dataManager.get("key"+5000));
+        assertNull(dataManager.get("key"+1));
+        
+        assertTrue(dataManager.contains("key"+5000));
+        assertFalse(dataManager.contains("key"+1));
+    }
+    
     private void internalSet(String key, String value) {
         dataManager.set(key, value);
     }
