@@ -2,10 +2,10 @@ package com.grayscaleconsulting.bitacora.data;
 
 import com.grayscaleconsulting.bitacora.cluster.ClusterMembership;
 import com.grayscaleconsulting.bitacora.cluster.nodes.Node;
-import com.grayscaleconsulting.bitacora.data.external.ExternalRequestTask;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
-import com.grayscaleconsulting.bitacora.model.KeyValue;
+import com.grayscaleconsulting.bitacora.data.external.ExternalRequestTask;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 import org.slf4j.Logger;
@@ -14,10 +14,15 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ * Base implementation of the DataManagerExternal interface to interact with other nodes.
+ *
  * Created by ivaramme on 6/30/15.
  */
 public class DataManagerExternalImpl implements DataManagerExternal {
@@ -61,7 +66,13 @@ public class DataManagerExternalImpl implements DataManagerExternal {
         }
 
         if(null != nodes) {
-            List<String> endpoints = nodes.stream().map(Node::getEndpoint).collect(Collectors.toList());
+            List<String> endpoints = nodes.stream().map(new Function<Node, String>() {
+                @Override
+                public String apply(Node node) {
+                    node.getStats().incRequests();
+                    return node.getEndpoint();
+                }
+            }).collect(Collectors.toList());
 
             if (endpoints.size() > 0) {
                 final TimerContext context = requestDurationTimer.time();

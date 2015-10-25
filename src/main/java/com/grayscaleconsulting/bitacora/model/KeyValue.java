@@ -3,9 +3,10 @@ package com.grayscaleconsulting.bitacora.model;
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
+ * A KeyValue instance represents and contains the data that users want to persist or query.
+ *
  * Created by ivaramme on 6/29/15.
  */
 public class KeyValue implements Serializable, Comparable<KeyValue> {

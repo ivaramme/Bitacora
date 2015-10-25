@@ -3,14 +3,14 @@ package com.grayscaleconsulting.bitacora.kafka;
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
-
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.*;
 import kafka.zk.EmbeddedZookeeper;
-
 import org.I0Itec.zkclient.ZkClient;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
@@ -19,10 +19,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import static org.junit.Assert.*;
 

@@ -23,13 +23,16 @@ public class Node {
     }
     
     public NodeStats getStats() {
+        if(null == stats) {
+            stats = new NodeStats();
+        }
         return stats;
     }
 
     public void setStats(NodeStats stats) {
         this.stats = stats;
     }
-    
+
     @Override
     public String toString() {
         return "Node: " + getName() + " Endpoint: " + getEndpoint();

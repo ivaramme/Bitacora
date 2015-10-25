@@ -6,20 +6,24 @@ import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.data.DataManagerExternal;
 import com.grayscaleconsulting.bitacora.data.DataManagerExternalImpl;
 import com.grayscaleconsulting.bitacora.data.DataManagerImpl;
-import com.grayscaleconsulting.bitacora.kafka.*;
+import com.grayscaleconsulting.bitacora.kafka.Consumer;
+import com.grayscaleconsulting.bitacora.kafka.KafkaProducerImpl;
+import com.grayscaleconsulting.bitacora.kafka.KafkaSimpleConsumerImpl;
+import com.grayscaleconsulting.bitacora.kafka.Producer;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
 import com.grayscaleconsulting.bitacora.rpc.AvroSocketRPCHandler;
 import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
-
 import com.grayscaleconsulting.bitacora.storage.LocalStorage;
 import com.grayscaleconsulting.bitacora.storage.LocalStorageRocksDBImpl;
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
+import com.grayscaleconsulting.bitacora.util.Utils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Main class to execute the server
@@ -28,11 +32,13 @@ import java.util.List;
  */
 public class Bitacora {
     public static void main(String[] args) throws Exception {
-
+        Properties properties = Utils.loadProperties();
+        
         //Address of the zookeeper host
         String zookeeperHosts = System.getenv("ZOOKEEPER_HOSTS");
-        if (null == zookeeperHosts)
+        if (null == zookeeperHosts) {
             zookeeperHosts = "127.0.0.1:2181";
+        }
 
         // Name of this node
         String nodeName = InetAddress.getLocalHost().getHostName();
@@ -59,16 +65,18 @@ public class Bitacora {
 
         // Kafka server to publish messages to
         String brokerList = System.getenv("BROKER_LIST");
-        if (null == brokerList)
+        if (null == brokerList) {
             brokerList = "127.0.0.1:9092";
+        }
 
         // Where to read and publish messages to
         String topic = System.getenv("KAFKA_TOPIC");
-        if (null == topic)
-            topic = "test";
+        if (null == topic) {
+            topic = properties.getProperty("kafka.default.topic", "bitacora");
+        }
 
         Metrics.initJmxReporter();
-
+        
         // Instantiate objects to execute service
         ClusterMembership clusterMembership = new ClusterMembershipImpl(zookeeperHosts, nodeAddress, apiPort, avroPort);
         clusterMembership.initialize();
@@ -79,7 +87,8 @@ public class Bitacora {
         Producer kafkaProducer = new KafkaProducerImpl(brokerList, topic);
         kafkaProducer.start();
 
-        LocalStorage localStorage = new LocalStorageRocksDBImpl("bitacora.db");
+        String databaseName = properties.getProperty("local.database.name", "bitacora.db");
+        LocalStorage localStorage = new LocalStorageRocksDBImpl(databaseName);
         localStorage.start();
         
         DataManagerExternal externalData = new DataManagerExternalImpl(clusterMembership);

@@ -3,10 +3,9 @@ package com.grayscaleconsulting.bitacora.rpc;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.grayscaleconsulting.bitacora.data.DataManager;
-import com.grayscaleconsulting.bitacora.model.KeyValue;
-
 import com.grayscaleconsulting.bitacora.kafka.Consumer;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;

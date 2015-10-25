@@ -1,15 +1,9 @@
 package com.grayscaleconsulting.bitacora.storage;
 
-import com.grayscaleconsulting.bitacora.model.KeyValue;
-
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.yammer.metrics.core.Counter;
-import org.rocksdb.CompactionStyle;
-import org.rocksdb.Options;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.CompressionType;
-
+import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

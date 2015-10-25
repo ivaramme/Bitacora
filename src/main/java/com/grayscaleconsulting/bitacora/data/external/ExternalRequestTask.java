@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
+import com.grayscaleconsulting.bitacora.util.Utils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -23,7 +24,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 /**
- * Represents a formal request to other nodes for an specific piece of data. 
+ * Represents an HTTP request to other nodes for an specific piece of data. Requests are timed out after `external.request.timeout`
  * 
  * <p>This class handles all the communication logic, response parsing and quorum.</p>
  * 
@@ -37,7 +38,6 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
     private final RequestConfig requestConfig;
 
     private static ExecutorService executor = Executors.newFixedThreadPool(3);
-    private static ScheduledExecutorService cancellableExecutor = Executors.newScheduledThreadPool(1);
 
     private List<String> endpoints;
     private String key;
@@ -56,7 +56,7 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
         this.request = new ExternalRequest(key, endpoints.size());
         this.timeout = 60;
         try {
-            timeout = Integer.parseInt(System.getProperty("external.request.timeout", "60"));
+            timeout = Integer.parseInt(Utils.loadProperties().getProperty("external.request.timeout"));
         } catch (NumberFormatException nfe) { }
 
         poolingCM = new PoolingHttpClientConnectionManager();

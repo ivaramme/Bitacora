@@ -6,17 +6,13 @@ import com.grayscaleconsulting.bitacora.cluster.ClusterMembershipImpl;
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
-
 import kafka.utils.TestUtils;
 import kafka.utils.TestZKUtils;
 import kafka.zk.EmbeddedZookeeper;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import java.util.Random;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.Assert.*;

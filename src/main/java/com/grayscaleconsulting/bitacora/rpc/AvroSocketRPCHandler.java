@@ -1,16 +1,15 @@
 package com.grayscaleconsulting.bitacora.rpc;
 
+import com.grayscaleconsulting.bitacora.data.DataManager;
+import com.grayscaleconsulting.bitacora.rpc.avro.RPCHandlerAvro;
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.NettyServer;
 import org.apache.avro.ipc.Server;
 import org.apache.avro.ipc.specific.SpecificResponder;
-
-import java.net.InetSocketAddress;
-
-import com.grayscaleconsulting.bitacora.data.DataManager;
-import com.grayscaleconsulting.bitacora.rpc.avro.RPCHandlerAvro;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetSocketAddress;
 
 /**
  * Socket RPC implementation using AVRO

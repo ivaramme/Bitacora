@@ -1,17 +1,23 @@
 package com.grayscaleconsulting.bitacora.data;
 
 import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
+import com.grayscaleconsulting.bitacora.kafka.Consumer;
+import com.grayscaleconsulting.bitacora.kafka.KafkaProducerImpl;
+import com.grayscaleconsulting.bitacora.kafka.KafkaSimpleConsumerImpl;
+import com.grayscaleconsulting.bitacora.kafka.Producer;
 import com.grayscaleconsulting.bitacora.model.KeyValue;
-import com.grayscaleconsulting.bitacora.kafka.*;
-
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.utils.*;
-
+import kafka.utils.MockTime;
+import kafka.utils.TestUtils;
+import kafka.utils.TestZKUtils;
+import kafka.utils.ZKStringSerializer$;
 import kafka.zk.EmbeddedZookeeper;
 import org.I0Itec.zkclient.ZkClient;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
 
@@ -20,12 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class DataManagerImplTest {
     public static final int SLEEP_TIME = 600;

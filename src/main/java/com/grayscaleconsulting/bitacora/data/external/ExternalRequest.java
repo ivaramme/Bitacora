@@ -1,5 +1,6 @@
 package com.grayscaleconsulting.bitacora.data.external;
 
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,10 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.grayscaleconsulting.bitacora.model.KeyValue;
-
 /**
- * An instance of the class ExternalRequest represents an external request made to another node
+ * An instance of the class ExternalRequest represents the state of external request made to another node
  * in a cluster with the intention of fetching data
  * 
  * Created by ivaramme on 6/30/15.
@@ -21,7 +20,7 @@ public class ExternalRequest {
     public static int STATUS_OK                    = 200;
     public static int STATUS_UNKNOWN               = -1;
     public static int STATUS_CANCELLED             = 2;
-    public static int STATUS_FAILED             = 3;
+    public static int STATUS_FAILED                = 3;
     public static int STATUS_INCOMPLETE            = 4;
 
     private KeyValue keyValue;

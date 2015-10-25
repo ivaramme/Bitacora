@@ -5,7 +5,7 @@ import com.grayscaleconsulting.bitacora.data.external.ExternalRequest;
 import java.util.UUID;
 
 /**
- * Represents a Manager that interacts with other nodes in the cluster for missing data
+ * Represents a Data Manager that interacts with other nodes in the cluster for missing data
  *
  * Created by ivaramme on 6/30/15.
  */

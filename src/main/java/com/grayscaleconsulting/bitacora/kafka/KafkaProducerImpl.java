@@ -1,7 +1,7 @@
 package com.grayscaleconsulting.bitacora.kafka;
 
-import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.util.Utils;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;

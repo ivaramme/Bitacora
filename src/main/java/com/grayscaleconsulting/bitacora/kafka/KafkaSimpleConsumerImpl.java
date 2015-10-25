@@ -1,19 +1,15 @@
 package com.grayscaleconsulting.bitacora.kafka;
 
 import com.grayscaleconsulting.bitacora.data.DataManager;
-import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.metrics.Metrics;
+import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.util.Utils;
 import com.yammer.metrics.core.Counter;
 import kafka.api.FetchRequestBuilder;
-import kafka.javaapi.FetchResponse;
-import kafka.javaapi.OffsetResponse;
 import kafka.api.PartitionOffsetRequestInfo;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
-import kafka.javaapi.PartitionMetadata;
-import kafka.javaapi.TopicMetadata;
-import kafka.javaapi.TopicMetadataRequest;
+import kafka.javaapi.*;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
 import org.apache.zookeeper.*;
@@ -32,7 +28,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Implementation of a Kafka Simple Consumer Based off: https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example
  * 
- * <p>This consumer keeps track of its own read offset using zookeeper.</p>
+ * <p>This consumer keeps track of its own read offset using Zookeeper but that offset gets updated every 10 messages to avoid over-loading
+ * ZK and since the system can perfectly replay previous messages without major issues* .</p>
  * 
  * Created by ivaramme on 8/24/15.
  */
@@ -542,7 +539,10 @@ public class KafkaSimpleConsumerImpl implements Consumer, Runnable {
     public String getLeadBroker() {
         return leadBroker;
     }
-    
+
+    /**
+     * Deletes the read offset for this node/topic.
+     */
     @Override
     public void resetOffset() {
         try {
