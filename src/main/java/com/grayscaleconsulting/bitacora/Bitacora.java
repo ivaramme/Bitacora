@@ -17,8 +17,9 @@ import com.grayscaleconsulting.bitacora.storage.LocalStorage;
 import com.grayscaleconsulting.bitacora.storage.LocalStorageRocksDBImpl;
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 import com.grayscaleconsulting.bitacora.util.Utils;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.HandlerList;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -115,15 +116,18 @@ public class Bitacora {
 
         // Start HTTP RPC server
         Server server = new Server();
-        server.addHandler(new HttpRPCHandler(dataManager, consumer));
+        
+        ServerConnector connector = new ServerConnector(server);
+        connector.setPort(apiPort);
+        connector.setHost(nodeName);
+        connector.setIdleTimeout(30000);
+        
+        server.addConnector(connector);
+        
+        HandlerList handlers = new HandlerList();
+        handlers.addHandler(new HttpRPCHandler(dataManager, consumer));
+        server.setHandler(handlers);
         server.setStopAtShutdown(true);
-        
-        SelectChannelConnector connector0 = new SelectChannelConnector();
-        connector0.setPort(apiPort);
-        connector0.setHost(nodeName);
-        connector0.setMaxIdleTime(30000);
-        
-        server.addConnector(connector0);
         
         Runtime.getRuntime().addShutdownHook(new Thread()
         {

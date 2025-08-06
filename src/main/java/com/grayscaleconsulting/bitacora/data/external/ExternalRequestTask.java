@@ -7,14 +7,15 @@ import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.grayscaleconsulting.bitacora.rpc.HttpRPCHandler;
 import com.grayscaleconsulting.bitacora.util.Utils;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,19 +61,17 @@ public class ExternalRequestTask implements Callable<ExternalRequest> {
         } catch (NumberFormatException nfe) { }
 
         poolingCM = new PoolingHttpClientConnectionManager();
-        poolingCM.setValidateAfterInactivity(1000);
+        poolingCM.setValidateAfterInactivity(Timeout.ofMilliseconds(1000));
 
         requestConfig = RequestConfig.custom()
-                .setSocketTimeout(timeout)
-                .setConnectTimeout(timeout / 3)
-                .setConnectionRequestTimeout(timeout * 2)
+                .setResponseTimeout(Timeout.ofMilliseconds(timeout))
+                .setConnectTimeout(Timeout.ofMilliseconds(timeout / 3))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeout * 2))
                 .build();
         
         client = HttpClients.custom()
                 .setConnectionManager(poolingCM)
-                .setMaxConnPerRoute(10)
                 .setDefaultRequestConfig(requestConfig)
-                .setMaxConnTotal(20)
                 .build();
     }
 
