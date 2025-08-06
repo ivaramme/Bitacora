@@ -3,7 +3,7 @@ package com.grayscaleconsulting.bitacora.rpc;
 import com.grayscaleconsulting.bitacora.data.DataManager;
 import com.grayscaleconsulting.bitacora.rpc.avro.RPCHandlerAvro;
 import org.apache.avro.AvroRemoteException;
-import org.apache.avro.ipc.NettyServer;
+import org.apache.avro.ipc.netty.NettyServer;
 import org.apache.avro.ipc.Server;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.slf4j.Logger;
@@ -30,7 +30,13 @@ public class AvroSocketRPCHandler implements RPCHandlerAvro {
 
     public void start() {
         logger.info("Starting Avro socket server port: " + port);
-        server = new NettyServer(new SpecificResponder(RPCHandlerAvro.class, this), new InetSocketAddress(port));
+        try {
+            server = new NettyServer(new SpecificResponder(RPCHandlerAvro.class, this), new InetSocketAddress(port));
+        } catch (InterruptedException e) {
+            logger.error("Failed to start Avro socket server", e);
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Failed to start Avro socket server", e);
+        }
     }
     
     @Override

@@ -1,8 +1,61 @@
-.idea
+# IDE
+.idea/
 *.iml
-target
+.vscode/
+.eclipse/
+
+# Build
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Generated files
 *Avro.java
 avro/
+
+# Database files
 *.db/
-.vagrant
+*.sqlite
+*.h2.db
+
+# Vagrant
+.vagrant/
+
+# Logs
+*.log
+logs/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# Node.js (if any frontend tools are added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Security
+dependency-check-report.html
+.security/
+
+# Docker
+.dockerignore

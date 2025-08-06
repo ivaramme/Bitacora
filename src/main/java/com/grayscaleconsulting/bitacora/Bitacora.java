@@ -18,7 +18,7 @@ import com.grayscaleconsulting.bitacora.storage.LocalStorageRocksDBImpl;
 import com.grayscaleconsulting.bitacora.util.UIDGenerator;
 import com.grayscaleconsulting.bitacora.util.Utils;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerList;
 
 import java.net.InetAddress;
@@ -117,10 +117,10 @@ public class Bitacora {
         // Start HTTP RPC server
         Server server = new Server();
         
-        SelectChannelConnector connector = new SelectChannelConnector();
+        ServerConnector connector = new ServerConnector(server);
         connector.setPort(apiPort);
         connector.setHost(nodeName);
-        connector.setMaxIdleTime(30000);
+        connector.setIdleTimeout(30000);
         
         server.addConnector(connector);
         
