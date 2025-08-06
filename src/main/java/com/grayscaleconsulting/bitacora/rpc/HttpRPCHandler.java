@@ -9,14 +9,13 @@ import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
-import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -51,7 +50,7 @@ public class HttpRPCHandler extends AbstractHandler {
     }
     
     @Override
-    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    public void handle(String target, org.eclipse.jetty.server.Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         if(target.startsWith(HEALTH_ENDPOINT)) {
             returnHealth(response);
             response.flushBuffer();
@@ -60,7 +59,7 @@ public class HttpRPCHandler extends AbstractHandler {
         }
         
         if(target.startsWith(RPC_ENDPOINT) || target.startsWith(RPC_CLUSTER_ENDPOINT)) {
-            logger.info("New request for endpoint: " + target);
+            logger.info("New request for target: " + target);
             requests.inc();
             final TimerContext context = requestDuration.time();
 
@@ -77,22 +76,22 @@ public class HttpRPCHandler extends AbstractHandler {
                     String key = request.getParameter("key");
                     if (null == key || key.isEmpty() || key.trim().isEmpty()) {
                         logger.info("Missing request information");
-                        sendErrorResponse(resp, HttpServletResponse.SC_BAD_REQUEST);
+                        sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST);
                         response.flushBuffer();
                         context.stop();
                         return;
                     }
 
                     // Forward request to cluster in case this is a normal RPC request. 
-                    // If the request came from the cluster rpc endpoint, do not forward
-                    boolean forwardRPCRequest = endpoint.equals(RPC_ENDPOINT);
+                    // If the request came from the cluster rpc target, do not forward
+                    boolean forwardRPCRequest = target.equals(RPC_ENDPOINT);
                     KeyValue keyValue = dataManager.getRaw(key, forwardRPCRequest);
                     if (null == keyValue) {
                         logger.info(key + " was not found, returning null value");
                         missedRequests.inc();
-                        sendErrorResponse(resp, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key " + key + " not found\"} ");
+                        sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key " + key + " not found\"} ");
                     } else {
-                        sendResponse(keyValue, resp, forwardRPCRequest);
+                        sendResponse(keyValue, response, forwardRPCRequest);
                     }
                     if(forwardRPCRequest)
                         publicRequests.inc(); // public requests will always forward
@@ -118,8 +117,8 @@ public class HttpRPCHandler extends AbstractHandler {
                         dataManager.delete(key);
                     }
                 } else {
-                    logger.info("Unknown method for endpoint: " + endpoint + " -> " + request.getMethod());
-                    sendErrorResponse(resp, HttpServletResponse.SC_NOT_IMPLEMENTED);
+                    logger.info("Unknown method for target: " + target + " -> " + request.getMethod());
+                    sendErrorResponse(response, HttpServletResponse.SC_NOT_IMPLEMENTED);
                     errors.inc();
                 }
             } catch (IOException ioe) {
@@ -131,7 +130,7 @@ public class HttpRPCHandler extends AbstractHandler {
             context.stop();
             baseRequest.setHandled(true);
         }else {
-            logger.info("Invalid endpoint: " + target);
+            logger.info("Invalid target: " + target);
             sendErrorResponse(response, HttpServletResponse.SC_NOT_IMPLEMENTED);
             errors.inc();
             baseRequest.setHandled(true);
@@ -140,7 +139,7 @@ public class HttpRPCHandler extends AbstractHandler {
         response.flushBuffer();
     }
 
-    private void sendResponse(KeyValue value, HttpServletResponse resp, boolean forwardRequest) throws IOException {
+    private void sendResponse(KeyValue value, HttpServletResponse response, boolean forwardRequest) throws IOException {
         logger.info(value + " was found " + (!forwardRequest ? "in local cache returning to fellow node" : ""));
 
         response.setContentType("application/json");
@@ -148,17 +147,17 @@ public class HttpRPCHandler extends AbstractHandler {
         response.getWriter().println(jsonParser.toJson(value, KeyValue.class));
     }
     
-    private void sendErrorResponse(HttpServletResponse resp, int code) throws IOException {
-        sendErrorResponse(resp, code, "{ \"message\": \"Error: "+ code +"\"} ");
+    private void sendErrorResponse(HttpServletResponse response, int code) throws IOException {
+        sendErrorResponse(response, code, "{ \"message\": \"Error: "+ code +"\"} ");
     }
 
-    private void sendErrorResponse(HttpServletResponse resp, int code, String message) throws IOException {
+    private void sendErrorResponse(HttpServletResponse response, int code, String message) throws IOException {
         response.setContentType("application/json");
         response.setStatus(code);
         response.getWriter().print(message);
     }
     
-    protected void returnHealth(HttpServletResponse resp) throws IOException {
+    protected void returnHealth(HttpServletResponse response) throws IOException {
         if((null != dataManager) && (null != consumer) && (consumer.isReady())) {
             response.setStatus(200);
             response.getWriter().print("OK");
