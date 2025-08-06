@@ -42,9 +42,8 @@ public class LocalStorageRocksDBImpl implements LocalStorage {
     @Override
     public void start() {
         options.setCreateIfMissing(true)
-                .createStatistics()
                 .setMaxWriteBufferNumber(3)
-                .setMaxBackgroundCompactions(10)
+                .setMaxBackgroundJobs(10)
                 .setCompressionType(CompressionType.SNAPPY_COMPRESSION)
                 .setCompactionStyle(CompactionStyle.UNIVERSAL);
 
@@ -104,14 +103,18 @@ public class LocalStorageRocksDBImpl implements LocalStorage {
         checkState(ready);
 
         logger.info("Deleting local value for key {}", key);
-        database.remove(key.getBytes());
+        try {
+            database.delete(key.getBytes());
+        } catch (RocksDBException e) {
+            logger.error("Error deleting key {}", key, e);
+        }
         deleteCounter.inc();
     }
 
     @Override
     public void shutdown() {
         if (null != database) database.close();
-        options.dispose();
+        if (null != options) options.close();
     }
 
     @Override

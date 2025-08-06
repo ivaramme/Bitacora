@@ -5,7 +5,7 @@ import com.grayscaleconsulting.bitacora.util.Utils;
 import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.avro.AvroRemoteException;
-import org.apache.avro.ipc.NettyTransceiver;
+import org.apache.avro.ipc.netty.NettyTransceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,8 +1,51 @@
-Bitacora - A Kafka Distributed Memory Database 
+# Bitacora - A Kafka Distributed Memory Database 
+
+[![CI](https://github.com/ivaramme/Bitacora/workflows/CI/badge.svg)](https://github.com/ivaramme/Bitacora/actions)
+[![Java Version](https://img.shields.io/badge/Java-17-blue.svg)](https://adoptium.net/)
+[![Maven Central](https://img.shields.io/badge/Maven-3.6+-blue.svg)](https://maven.apache.org/)
+
+## Recent Updates (2024)
+
+This project has been modernized with:
+- ✅ **Java 17 LTS** (upgraded from Java 8)
+- ✅ **Updated dependencies** for security and compatibility
+- ✅ **Modern Maven plugins** and build practices
+- ✅ **GitHub Actions CI/CD** pipeline
+- ✅ **Improved Docker support** with multi-stage builds
+- ✅ **Security scanning** with OWASP dependency check
+- ✅ **Code quality tools** and modern development practices
+
+> **Note**: The Kafka dependency remains at version 0.8.2.1 as updating to Kafka 3.x requires significant API changes. This is planned for a future major release.
 
 [ ![Codeship Status for ivaramme/Bitacora](https://codeship.com/projects/af715930-26b3-0133-0bf7-42218616331f/status?branch=master)](https://codeship.com/projects/97183)
 
 # Description:
+
+## Requirements
+
+- **Java 17 or later** (OpenJDK or Oracle JDK)
+- **Maven 3.6.0 or later**
+- **Zookeeper 3.4+** for cluster coordination
+- **Kafka 0.8.2+** for the distributed log
+- **Docker** (optional, for containerized deployment)
+
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/ivaramme/Bitacora.git
+cd Bitacora
+
+# Build the project
+mvn clean package
+
+# Run with default settings (requires local Kafka/Zookeeper)
+java -jar target/bitacora-1.0-SNAPSHOT-jar-with-dependencies.jar
+
+# Or use Docker
+docker build -t bitacora .
+docker run -e "ZOOKEEPER_HOSTS=your-zk-host:2181" -e "BROKER_LIST=your-kafka-host:9092" bitacora
+```
 
 This project is an implementation of a distributed, eventually consistent and replicated in-memory key-value datastore that relies on Kafka and accessible from a Web API or a Socket RPC clients, purely for research purposes (meaning there's a lot more to be done)
 

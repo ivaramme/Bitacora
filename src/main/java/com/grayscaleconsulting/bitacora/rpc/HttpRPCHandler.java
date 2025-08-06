@@ -9,7 +9,7 @@ import com.grayscaleconsulting.bitacora.model.KeyValue;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
-import org.mortbay.jetty.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,46 +50,48 @@ public class HttpRPCHandler extends AbstractHandler {
     }
     
     @Override
-    public void handle(String endpoint, HttpServletRequest req, HttpServletResponse resp, int i) throws IOException, ServletException {
-        if(endpoint.startsWith(HEALTH_ENDPOINT)) {
-            returnHealth(resp);
-            resp.flushBuffer();
+    public void handle(String target, org.eclipse.jetty.server.Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        if(target.startsWith(HEALTH_ENDPOINT)) {
+            returnHealth(response);
+            response.flushBuffer();
+            baseRequest.setHandled(true);
             return;
         }
         
-        if(endpoint.startsWith(RPC_ENDPOINT) || endpoint.startsWith(RPC_CLUSTER_ENDPOINT)) {
-            logger.info("New request for endpoint: " + endpoint);
+        if(target.startsWith(RPC_ENDPOINT) || target.startsWith(RPC_CLUSTER_ENDPOINT)) {
+            logger.info("New request for target: " + target);
             requests.inc();
             final TimerContext context = requestDuration.time();
 
             try {
                 if(null == dataManager) {
                     logger.error("RPC service is not configured correctly");
-                    sendErrorResponse(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                    sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE);
                     context.stop();
+                    baseRequest.setHandled(true);
                     return;
                 }
 
-                if(req.getMethod().equalsIgnoreCase("GET")) {
-                    String key = req.getParameter("key");
+                if(request.getMethod().equalsIgnoreCase("GET")) {
+                    String key = request.getParameter("key");
                     if (null == key || key.isEmpty() || key.trim().isEmpty()) {
                         logger.info("Missing request information");
-                        sendErrorResponse(resp, HttpServletResponse.SC_BAD_REQUEST);
-                        resp.flushBuffer();
+                        sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST);
+                        response.flushBuffer();
                         context.stop();
                         return;
                     }
 
                     // Forward request to cluster in case this is a normal RPC request. 
-                    // If the request came from the cluster rpc endpoint, do not forward
-                    boolean forwardRPCRequest = endpoint.equals(RPC_ENDPOINT);
+                    // If the request came from the cluster rpc target, do not forward
+                    boolean forwardRPCRequest = target.equals(RPC_ENDPOINT);
                     KeyValue keyValue = dataManager.getRaw(key, forwardRPCRequest);
                     if (null == keyValue) {
                         logger.info(key + " was not found, returning null value");
                         missedRequests.inc();
-                        sendErrorResponse(resp, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key " + key + " not found\"} ");
+                        sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "{ \"message\": \"Key " + key + " not found\"} ");
                     } else {
-                        sendResponse(keyValue, resp, forwardRPCRequest);
+                        sendResponse(keyValue, response, forwardRPCRequest);
                     }
                     if(forwardRPCRequest)
                         publicRequests.inc(); // public requests will always forward
@@ -98,25 +100,25 @@ public class HttpRPCHandler extends AbstractHandler {
                     
                 } else
                 // Set a new value
-                if(req.getMethod().equalsIgnoreCase("POST")) {
+                if(request.getMethod().equalsIgnoreCase("POST")) {
                     logger.info("RPC: Creating a new key");
-                    String key = req.getParameter("key");
-                    String value = req.getParameter("value");
+                    String key = request.getParameter("key");
+                    String value = request.getParameter("value");
                     if ((null != key || !key.isEmpty() || !key.trim().isEmpty()) &&
                             (null != value || !value.isEmpty() || !value.trim().isEmpty())) {
                         dataManager.set(key, value);
                     }
                 } else
                 // Delete value
-                if(req.getMethod().equalsIgnoreCase("DELETE")) {
+                if(request.getMethod().equalsIgnoreCase("DELETE")) {
                     logger.info("RPC: Deleting key");
-                    String key = req.getParameter("key");
+                    String key = request.getParameter("key");
                     if (null != key || !key.isEmpty() || !key.trim().isEmpty()) {
                         dataManager.delete(key);
                     }
                 } else {
-                    logger.info("Unknown method for endpoint: " + endpoint + " -> " + req.getMethod());
-                    sendErrorResponse(resp, HttpServletResponse.SC_NOT_IMPLEMENTED);
+                    logger.info("Unknown method for target: " + target + " -> " + request.getMethod());
+                    sendErrorResponse(response, HttpServletResponse.SC_NOT_IMPLEMENTED);
                     errors.inc();
                 }
             } catch (IOException ioe) {
@@ -126,40 +128,42 @@ public class HttpRPCHandler extends AbstractHandler {
             }
 
             context.stop();
+            baseRequest.setHandled(true);
         }else {
-            logger.info("Invalid endpoint: " + endpoint);
-            sendErrorResponse(resp, HttpServletResponse.SC_NOT_IMPLEMENTED);
+            logger.info("Invalid target: " + target);
+            sendErrorResponse(response, HttpServletResponse.SC_NOT_IMPLEMENTED);
             errors.inc();
+            baseRequest.setHandled(true);
         }
 
-        resp.flushBuffer();
+        response.flushBuffer();
     }
 
-    private void sendResponse(KeyValue value, HttpServletResponse resp, boolean forwardRequest) throws IOException {
+    private void sendResponse(KeyValue value, HttpServletResponse response, boolean forwardRequest) throws IOException {
         logger.info(value + " was found " + (!forwardRequest ? "in local cache returning to fellow node" : ""));
 
-        resp.setContentType("application/json");
-        resp.setStatus(HttpServletResponse.SC_OK);
-        resp.getWriter().println(jsonParser.toJson(value, KeyValue.class));
+        response.setContentType("application/json");
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.getWriter().println(jsonParser.toJson(value, KeyValue.class));
     }
     
-    private void sendErrorResponse(HttpServletResponse resp, int code) throws IOException {
-        sendErrorResponse(resp, code, "{ \"message\": \"Error: "+ code +"\"} ");
+    private void sendErrorResponse(HttpServletResponse response, int code) throws IOException {
+        sendErrorResponse(response, code, "{ \"message\": \"Error: "+ code +"\"} ");
     }
 
-    private void sendErrorResponse(HttpServletResponse resp, int code, String message) throws IOException {
-        resp.setContentType("application/json");
-        resp.setStatus(code);
-        resp.getWriter().print(message);
+    private void sendErrorResponse(HttpServletResponse response, int code, String message) throws IOException {
+        response.setContentType("application/json");
+        response.setStatus(code);
+        response.getWriter().print(message);
     }
     
-    protected void returnHealth(HttpServletResponse resp) throws IOException {
+    protected void returnHealth(HttpServletResponse response) throws IOException {
         if((null != dataManager) && (null != consumer) && (consumer.isReady())) {
-            resp.setStatus(200);
-            resp.getWriter().print("OK");
+            response.setStatus(200);
+            response.getWriter().print("OK");
         } else {
-            resp.setStatus(500);
-            resp.getWriter().print("DOWN");
+            response.setStatus(500);
+            response.getWriter().print("DOWN");
         }
     }
 }
